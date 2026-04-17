@@ -1,0 +1,138 @@
+/* Seceurope Design Tokens — 2026 demo
+ * Single source of structural + colour truth for all three apps.
+ * Edit this file to cascade changes through hub, manager, tablet, and chainway. */
+
+:root {
+  /* Brand */
+  --brand-primary: #E85A1E;
+  --brand-primary-hover: #D24A12;
+  --brand-primary-soft: rgba(232, 90, 30, 0.14);
+  --brand-primary-line: rgba(232, 90, 30, 0.32);
+  --brand-accent: #FFB673;
+  --brand-ink: #0C1A17;
+
+  /* Surfaces */
+  --canvas: #F2EEE5;
+  --canvas-dark: #070F0D;
+  --surface: #FFFFFF;
+  --surface-alt: #FBF8F0;
+  --surface-sunken: #EFE9DC;
+  --surface-dark: #0E1A17;
+  --surface-dark-alt: #142421;
+  --surface-dark-raised: #1B2E29;
+
+  /* Borders */
+  --border-subtle: rgba(14, 26, 23, 0.06);
+  --border-default: rgba(14, 26, 23, 0.12);
+  --border-strong: rgba(14, 26, 23, 0.22);
+  --border-dark: rgba(255, 255, 255, 0.07);
+  --border-dark-strong: rgba(255, 255, 255, 0.14);
+
+  /* Text */
+  --text-primary: #0E1A17;
+  --text-secondary: #3E4E49;
+  --text-muted: #6F7E78;
+  --text-faint: #9BAAA4;
+  --text-inverse: #F7F3E9;
+  --text-inverse-muted: #9FADA7;
+
+  /* Semantic */
+  --success: #2F9E6A;
+  --success-ink: #0A4A2D;
+  --success-soft: rgba(47, 158, 106, 0.14);
+  --success-line: rgba(47, 158, 106, 0.32);
+
+  --warn: #C89125;
+  --warn-ink: #5B3F06;
+  --warn-soft: rgba(200, 145, 37, 0.16);
+  --warn-line: rgba(200, 145, 37, 0.38);
+
+  --danger: #D64D41;
+  --danger-ink: #6B1A14;
+  --danger-soft: rgba(214, 77, 65, 0.14);
+  --danger-line: rgba(214, 77, 65, 0.34);
+
+  --info: #2B7A9E;
+  --info-ink: #0F3A52;
+  --info-soft: rgba(43, 122, 158, 0.14);
+  --info-line: rgba(43, 122, 158, 0.32);
+
+  /* Radii */
+  --radius-card: 8px;
+  --radius-button: 5px;
+  --radius-input: 5px;
+  --radius-pill: 999px;
+  --radius-xl: 20px;
+
+  /* Elevation */
+  --shadow-1: 0 1px 2px rgba(14, 26, 23, 0.05);
+  --shadow-2: 0 2px 6px rgba(14, 26, 23, 0.07);
+  --shadow-3: 0 10px 28px rgba(14, 26, 23, 0.12);
+  --shadow-4: 0 24px 60px rgba(0, 0, 0, 0.28);
+
+  /* Type */
+  --font-body: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-serif: "Instrument Serif", Georgia, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Type sizes */
+  --fs-kpi: 34px;
+  --fs-title: 22px;
+  --fs-h1: 26px;
+  --fs-body: 14px;
+  --fs-small: 12px;
+  --fs-eyebrow: 10px;
+
+  /* Layout */
+  --content-pad: 24px;
+  --card-gap: 14px;
+}
+
+/* Reset */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  font-weight: 400;
+  color: var(--text-primary);
+  background: var(--canvas);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: var(--brand-primary-soft);
+  color: var(--brand-ink);
+}

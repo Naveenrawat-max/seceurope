@@ -1,0 +1,46 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# build output
+/.next/
+/out/
+/build
+/coverage
+
+# environment
+.env*
+!.env.example
+
+# local runtime state
+/.data/
+/.logs/
+dev-server.log
+dev-server.err.log
+prod-server.log
+prod-server.err.log
+*.log
+
+# local tooling
+.vercel
+.idea/
+.vscode/
+AGENTS.md
+CLAUDE.md
+
+# misc
+.DS_Store
+Thumbs.db
+*.pem
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*

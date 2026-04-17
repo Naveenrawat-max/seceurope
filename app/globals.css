@@ -1,0 +1,21 @@
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap");
+@import "../styles/tokens.css";
+@import "../styles/app.css";
+@import "../styles/manager.css";
+@import "../styles/tablet.css";
+@import "../styles/hub.css";
+
+html {
+  height: 100%;
+}
+
+body {
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+button.mgr-link,
+button.tab-nav {
+  border: 0;
+  background: transparent;
+}
