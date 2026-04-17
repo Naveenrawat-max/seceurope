@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Seceurope Web
 
 Seceurope Web is a Next.js access-control portal for gate operations. It provides a manager dashboard, a tablet guard view, ABIOT scan ingest endpoints, and a Supabase-backed event pipeline for RFID vehicle checks.
@@ -123,3 +124,7 @@ This project uses a custom Node server and WebSockets. Deploy it to a host that 
 ## Repository Notes
 
 This repo is prepared to be pushed as a standalone website project. Local-only files such as `.env.local`, `.next`, `node_modules`, `.data`, `.logs`, editor settings, and assistant helper files are excluded through `.gitignore`.
+=======
+# seceurope
+Seceurope Web: Next.js access-control portal for manager and tablet views with ABIOT RFID ingest, Supabase event storage, and live gate activity workflows.
+>>>>>>> d8d3e57d767b577d8a6a14308f777df719cbc0df
