@@ -80,23 +80,27 @@ export async function POST(request: Request) {
     const input = normalizePayload(rawBody);
     const context = await resolveRegistrationContext(input);
 
-    if (!context.tid) {
-      return NextResponse.json(
-        {
-          error: "TID is required before this EPC can be saved to ABIOT. Scan the tag once in ABIOT or fetch it from the live queue first.",
-        },
-        { status: 400 },
-      );
-    }
-
     const website = buildVehicleWebsitePayload(input);
-    await updateAbiotRecord({
-      uhf_epc_hex: input.epc,
-      uhf_tid: context.tid,
-      label: input.label,
-      state: input.state,
-      website: website ?? undefined,
-    });
+    let abiotSynced = false;
+    let abiotSyncWarning: string | null = null;
+    const deferredSyncMessage = `Saved ${input.label} to the website registry by EPC. ABIOT sync is deferred until this tag has a known TID.`;
+
+    if (context.tid) {
+      try {
+        await updateAbiotRecord({
+          uhf_epc_hex: input.epc,
+          uhf_tid: context.tid,
+          label: input.label,
+          state: input.state,
+          website: website ?? undefined,
+        });
+        abiotSynced = true;
+      } catch (abiotError) {
+        abiotSyncWarning = abiotError instanceof Error
+          ? `ABIOT sync failed: ${abiotError.message}`
+          : "ABIOT sync failed — the record was saved to the website registry only.";
+      }
+    }
 
     const status = eventStatusFromVehicleState(input.state);
     const mirrored = await upsertVehicleRegistration({
@@ -118,11 +122,17 @@ export async function POST(request: Request) {
     if (input.eventKey) {
       await resolveEvent(input.eventKey, {
         status,
-        outcome: "registered-in-abiot",
-        note: `${input.label} was registered in ABIOT from the web portal.`,
+        outcome: abiotSynced ? "registered-in-abiot" : "registered-on-web",
+        note: abiotSynced
+          ? `${input.label} was registered in ABIOT from the web portal.`
+          : `${input.label} was saved in the website registry. ABIOT sync is pending until a TID is captured.`,
         resolvedBy: input.resolvedBy,
       });
     }
+
+    const message = abiotSynced
+      ? `Saved ${input.label} to ABIOT and refreshed the shared vehicle registry.`
+      : deferredSyncMessage;
 
     return NextResponse.json({
       ok: true,
@@ -131,6 +141,9 @@ export async function POST(request: Request) {
       resolvedTid: context.tid,
       sourceEventKey: input.eventKey,
       refreshedFromLookup: Boolean(context.lookup),
+      abiotSynced,
+      message,
+      warning: abiotSyncWarning ?? (abiotSynced ? null : deferredSyncMessage),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to register vehicle";

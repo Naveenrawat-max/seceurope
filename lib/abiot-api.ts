@@ -261,7 +261,7 @@ export async function lookupAbiotDirectoryDetails(epc: string): Promise<Director
 
 export async function updateAbiotRecord(input: {
   uhf_epc_hex: string;
-  uhf_tid: string;
+  uhf_tid?: string | null;
   label?: string;
   state?: string;
   website?: Record<string, unknown> | string;
@@ -273,7 +273,9 @@ export async function updateAbiotRecord(input: {
   const url = new URL(abiotConfig.updateUrl);
   url.searchParams.set("token", abiotConfig.updateToken);
   url.searchParams.set("uhf_epc_hex", input.uhf_epc_hex);
-  url.searchParams.set("uhf_tid", input.uhf_tid);
+  if (input.uhf_tid?.trim()) {
+    url.searchParams.set("uhf_tid", input.uhf_tid.trim());
+  }
   if (input.label) {
     url.searchParams.set("label", input.label);
   }
@@ -293,10 +295,25 @@ export async function updateAbiotRecord(input: {
   });
 
   if (!response.ok) {
-    throw new Error(`ABIOT update failed (${response.status})`);
+    const body = await response.text().catch(() => "");
+    let details = "";
+    if (body) {
+      try {
+        const parsed = JSON.parse(body) as { error?: string; message?: string; Comment?: string; Status?: string };
+        details =
+          parsed.error?.trim()
+          || parsed.message?.trim()
+          || parsed.Comment?.trim()
+          || parsed.Status?.trim()
+          || "";
+      } catch {
+        details = body.trim();
+      }
+    }
+    throw new Error(details ? `ABIOT update failed (${response.status}): ${details}` : `ABIOT update failed (${response.status})`);
   }
 
-  return response.json();
+  return response.json().catch(() => null);
 }
 
 export async function sendAbiotMail(input: {

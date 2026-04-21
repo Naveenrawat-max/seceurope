@@ -184,4 +184,49 @@ describe("api routes", () => {
       global.fetch = originalFetch;
     }
   });
+
+  it("POST /api/abiot/register allows EPC-only saves when no TID is known", async () => {
+    const originalFetch = global.fetch;
+    const upstreamFetch = vi.fn(async (input: RequestInfo | URL) =>
+      new Response(JSON.stringify({ error: "uhf_tid is required", url: String(input) }), {
+        status: 400,
+        headers: {
+          "content-type": "application/json",
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", upstreamFetch);
+
+    try {
+      const response = await registerRoute(
+        new Request("http://localhost/api/abiot/register", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            epc: "E2806995000050008D040977",
+            label: "EPC Only Vehicle",
+            state: "allowed",
+            ownerName: "EPC Only Owner",
+          }),
+        }),
+      );
+
+      const payload = await response.json();
+      expect(response.status, JSON.stringify(payload)).toBe(200);
+      expect(payload.ok).toBe(true);
+      expect(payload.resolvedTid).toBeNull();
+      expect(payload.abiotSynced).toBe(false);
+      expect(payload.message).toContain("website registry by EPC");
+      expect(upstreamFetch).not.toHaveBeenCalled();
+
+      const eventsResponse = await getEventsRoute(new Request("http://localhost/api/events?surface=manager"));
+      const eventsPayload = await eventsResponse.json();
+      expect(eventsPayload.events.some((event: { subjectName: string }) => event.subjectName === "EPC Only Vehicle")).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+      global.fetch = originalFetch;
+    }
+  });
 });

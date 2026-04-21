@@ -5,6 +5,7 @@ import Link from "next/link";
 import { VehicleRegistrationForm } from "@/components/vehicle-registration-form";
 import { registerVehicleViaApi } from "@/lib/client-api";
 import { GATES, PRESETS, SITE_INFO } from "@/lib/demo-data";
+import { latestEventsByEpc } from "@/lib/event-views";
 import { useEventsSurface } from "@/hooks/use-events-surface";
 import {
   Icon,
@@ -179,19 +180,13 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
     };
   }, []);
 
-  const reviewEvents = useMemo(() => events.filter((event) => event.status === "review"), [events]);
+  const currentEvents = useMemo(() => latestEventsByEpc(events), [events]);
+  const reviewEvents = useMemo(() => currentEvents.filter((event) => event.status === "review"), [currentEvents]);
   const openedEvents = useMemo(() => events.filter(isOpenedAtGate), [events]);
   const deniedEvents = useMemo(() => events.filter((event) => event.status === "denied"), [events]);
-  const recentCardEvents = useMemo(() => events.slice(0, 4), [events]);
-  const directoryEvents = useMemo(() => {
-    const seen = new Map<string, AccessEvent>();
-    for (const event of events) {
-      if (!seen.has(event.epc)) {
-        seen.set(event.epc, event);
-      }
-    }
-    return [...seen.values()];
-  }, [events]);
+  const recentCardEvents = useMemo(() => currentEvents.slice(0, 4), [currentEvents]);
+  const antennaEvents = useMemo(() => reviewEvents.filter((event) => event.mode === "antenna"), [reviewEvents]);
+  const directoryEvents = currentEvents;
   const directoryGroups = useMemo(() => {
     return {
       allowed: directoryEvents.filter((event) => event.status === "allowed"),
@@ -201,10 +196,15 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
   }, [directoryEvents]);
   const latest = useMemo(() => {
     if (!selectedEventKey) {
-      return reviewEvents[0] ?? events[0] ?? null;
+      return reviewEvents[0] ?? currentEvents[0] ?? events[0] ?? null;
     }
-    return events.find((event) => event.eventKey === selectedEventKey) || reviewEvents[0] || events[0] || null;
-  }, [events, reviewEvents, selectedEventKey]);
+    return currentEvents.find((event) => event.eventKey === selectedEventKey)
+      || events.find((event) => event.eventKey === selectedEventKey)
+      || reviewEvents[0]
+      || currentEvents[0]
+      || events[0]
+      || null;
+  }, [currentEvents, events, reviewEvents, selectedEventKey]);
   const syncLabel = generatedAt.startsWith("1970-01-01") ? "No sync yet" : `Updated ${relative(generatedAt)}`;
 
   const submitScan = async (event: FormEvent<HTMLFormElement>) => {
@@ -311,7 +311,7 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
     setRegisterMessage(null);
 
     try {
-      await registerVehicleViaApi({
+      const result = await registerVehicleViaApi({
         epc,
         tid: registerTid.trim().toUpperCase() || undefined,
         label,
@@ -329,7 +329,7 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
         resolvedBy: "Kiran P. - Guard 14",
       });
 
-      const successMessage = `Saved ${label} to ABIOT and made it available to Tablet and Manager.`;
+      const successMessage = result.message || `Saved ${label} and made it available to Tablet and Manager.`;
       setRegisterMessage(successMessage);
       setRegisterTone("success");
       await handleRegistrationSuccess(successMessage);
@@ -391,7 +391,7 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                 </div>
                 <div>
                   <span>Review</span>
-                  <b>{counters.pending}</b>
+                  <b>{reviewEvents.length}</b>
                 </div>
               </div>
               <Link className="btn ghost-dark block" href="/">
@@ -452,7 +452,7 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
             <section className="tab-kpis">
               {kpi("Cars today", counters.total, "Entry + exit")}
               {kpi("Auto-allowed", counters.allowed, "Resident - guest - worker")}
-              {kpi("Needs review", counters.pending, "Waiting at the gate", counters.pending > 0)}
+              {kpi("Needs review", reviewEvents.length, "Waiting at the gate", reviewEvents.length > 0)}
               {kpi("Denied", counters.denied, "Blocked vehicles")}
             </section>
 
@@ -656,12 +656,12 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                       <div className="eyebrow">Antenna queue</div>
                       <div className="title">Cars waiting</div>
                     </div>
-                    {reviewEvents.length ? <span className="badge warn">{reviewEvents.length}</span> : <span className="badge success">Clear</span>}
+                    {antennaEvents.length ? <span className="badge warn">{antennaEvents.length}</span> : <span className="badge success">Clear</span>}
                   </div>
                   <div className="card-body tight">
-                    {reviewEvents.length ? (
+                    {antennaEvents.length ? (
                       <div className="stack">
-                        {reviewEvents.slice(0, 4).map((event) => (
+                        {antennaEvents.slice(0, 4).map((event) => (
                           <div className="queue-card" key={event.eventKey}>
                             <div className="row-between">
                               <div className="row" style={{ gap: 10, alignItems: "flex-start" }}>
@@ -682,23 +682,31 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                               </span>
                             </div>
                             <div className="row-wrap">
-                              <button className="btn success sm" type="button" onClick={() => void submitDecision("open", event)} disabled={decisionPendingKey === event.eventKey}>
-                                <Icon name="check" size={12} /> Open
-                              </button>
-                              <button className="btn warn sm" type="button" onClick={() => void submitDecision("visitor", event)} disabled={decisionPendingKey === event.eventKey}>
-                                <Icon name="shieldCheck" size={12} /> Pass
-                              </button>
-                              <button className="btn ghost sm" type="button" onClick={() => void submitDecision("call", event)} disabled={decisionPendingKey === event.eventKey}>
-                                <Icon name="phone" size={12} /> Call
-                              </button>
-                              <button className="btn danger sm" type="button" onClick={() => void submitDecision("deny", event)} disabled={decisionPendingKey === event.eventKey}>
-                                <Icon name="x" size={12} /> Deny
-                              </button>
-                              {canRegisterVehicle(event) ? (
-                                <button className="btn primary sm" type="button" onClick={() => setRegisteringEventKey((current) => current === event.eventKey ? null : event.eventKey)}>
-                                  <Icon name="plus" size={12} /> Register
+                              {event.status === "review" || event.status === "denied" ? (
+                                <>
+                                  <button className="btn success sm" type="button" onClick={() => void submitDecision("open", event)} disabled={decisionPendingKey === event.eventKey}>
+                                    <Icon name="check" size={12} /> Open
+                                  </button>
+                                  <button className="btn warn sm" type="button" onClick={() => void submitDecision("visitor", event)} disabled={decisionPendingKey === event.eventKey}>
+                                    <Icon name="shieldCheck" size={12} /> Pass
+                                  </button>
+                                  <button className="btn ghost sm" type="button" onClick={() => void submitDecision("call", event)} disabled={decisionPendingKey === event.eventKey}>
+                                    <Icon name="phone" size={12} /> Call
+                                  </button>
+                                  <button className="btn danger sm" type="button" onClick={() => void submitDecision("deny", event)} disabled={decisionPendingKey === event.eventKey}>
+                                    <Icon name="x" size={12} /> Deny
+                                  </button>
+                                  {canRegisterVehicle(event) ? (
+                                    <button className="btn primary sm" type="button" onClick={() => setRegisteringEventKey((current) => current === event.eventKey ? null : event.eventKey)}>
+                                      <Icon name="plus" size={12} /> Register
+                                    </button>
+                                  ) : null}
+                                </>
+                              ) : (
+                                <button className="btn ghost sm" type="button" onClick={() => setSelectedEventKey(event.eventKey)}>
+                                  <Icon name="scan" size={12} /> Focus card
                                 </button>
-                              ) : null}
+                              )}
                             </div>
                             {registeringEventKey === event.eventKey ? (
                               <div className="mt-3">
@@ -1291,7 +1299,7 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                       </div>
                       <div className="stack">
                         <div className="eyebrow">Recent EPCs</div>
-                        {events.slice(0, 4).map((event) => (
+                        {currentEvents.slice(0, 4).map((event) => (
                           <button
                             key={`register-epc-${event.eventKey}`}
                             type="button"

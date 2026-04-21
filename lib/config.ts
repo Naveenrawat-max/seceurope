@@ -76,16 +76,16 @@ export const appConfig = {
 };
 
 const abiotBaseUrl = env("ABIOT_API_BASE_URL", "https://api.abiot.re").replace(/\/+$/, "");
-const localLookupUrl = localProperty("trc.abiot.lookupBaseUrl");
-const localUpdateUrl = localProperty("trc.abiot.updateBaseUrl");
+const localLookupBase = localProperty("trc.abiot.lookupBaseUrl").replace(/\/+$/, "");
+const localUpdateBase = localProperty("trc.abiot.updateBaseUrl").replace(/\/+$/, "");
 
 export const abiotConfig = {
   baseUrl: abiotBaseUrl,
-  lookupUrl: env("ABIOT_LOOKUP_URL", localLookupUrl || `${abiotBaseUrl}/lookup/index.php`),
-  updateUrl: env("ABIOT_UPDATE_URL", localUpdateUrl || `${abiotBaseUrl}/update/index.php`),
+  lookupUrl: env("ABIOT_LOOKUP_URL", localLookupBase ? `${localLookupBase}/lookup/index.php` : `${abiotBaseUrl}/lookup/index.php`),
+  updateUrl: env("ABIOT_UPDATE_URL", localUpdateBase ? `${localUpdateBase}/update/index.php` : `${abiotBaseUrl}/update/index.php`),
   mailUrl: env("ABIOT_MAIL_URL", `${abiotBaseUrl}/mail/index.php`),
   updateToken: process.env.ABIOT_UPDATE_TOKEN?.trim() || localProperty("trc.abiot.updateToken") || "",
-  mailKeyId: process.env.ABIOT_MAIL_KEYID?.trim() || "",
+  mailKeyId: process.env.ABIOT_MAIL_KEYID?.trim() || localProperty("trc.abiot.mailKeyId") || "",
 };
 
 export const supabaseConfig = {

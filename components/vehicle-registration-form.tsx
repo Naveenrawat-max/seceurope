@@ -38,8 +38,8 @@ export function VehicleRegistrationForm({
   allowIdentityEdit = true,
   compact = false,
   title = "Register vehicle",
-  description = "Save this EPC to ABIOT so future scans resolve automatically on Manager and Tablet.",
-  submitLabel = "Save to ABIOT",
+  description = "Save this EPC to the live vehicle registry. If TID is known, it will also sync to ABIOT for future scans.",
+  submitLabel = "Save vehicle",
   onCancel,
   onSuccess,
 }: VehicleRegistrationFormProps) {
@@ -61,7 +61,7 @@ export function VehicleRegistrationForm({
     if (tid.trim()) {
       return "TID is available, so this record can be written back to ABIOT immediately.";
     }
-    return "If TID is blank, the web will try to recover it from the last scan for this EPC.";
+    return "TID is optional. If it is blank, the web saves by EPC now and will sync to ABIOT once a TID is known.";
   }, [tid]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -74,7 +74,7 @@ export function VehicleRegistrationForm({
     setMessage(null);
 
     try {
-      await registerVehicleViaApi({
+      const result = await registerVehicleViaApi({
         epc: epc.trim().toUpperCase(),
         tid: tid.trim() || undefined,
         eventKey: initialEvent?.eventKey,
@@ -93,9 +93,11 @@ export function VehicleRegistrationForm({
         resolvedBy: actorLabel,
       });
 
-      const successMessage = initialEvent
-        ? `Saved ${label.trim()} to ABIOT and refreshed the live gate card.`
-        : `Saved ${label.trim()} to ABIOT and added it to the website registry.`;
+      const successMessage = result.message || (
+        initialEvent
+          ? `Saved ${label.trim()} and refreshed the live gate card.`
+          : `Saved ${label.trim()} and added it to the website registry.`
+      );
 
       setMessage(successMessage);
       setTone("success");

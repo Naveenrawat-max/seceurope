@@ -87,8 +87,11 @@ export async function registerVehicleViaApi(payload: VehicleRegistrationInput) {
     ok: boolean;
     event: unknown;
     registration: unknown;
-    resolvedTid: string;
+    resolvedTid: string | null;
     sourceEventKey: string | null;
     refreshedFromLookup: boolean;
+    abiotSynced: boolean;
+    message: string;
+    warning: string | null;
   }>;
 }

@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { VehicleRegistrationForm } from "@/components/vehicle-registration-form";
 import { GATES, READERS } from "@/lib/demo-data";
+import { latestEventsByEpc } from "@/lib/event-views";
 import { useEventsSurface } from "@/hooks/use-events-surface";
 import {
   Icon,
@@ -150,9 +151,10 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
     };
   }, []);
 
-  const reviewEvents = useMemo(() => events.filter((event) => event.status === "review"), [events]);
-  const recentCardEvents = useMemo(() => events.slice(0, 4), [events]);
-  const latestEvent = events[0] ?? null;
+  const currentEvents = useMemo(() => latestEventsByEpc(events), [events]);
+  const reviewEvents = useMemo(() => currentEvents.filter((event) => event.status === "review"), [currentEvents]);
+  const recentCardEvents = useMemo(() => currentEvents.slice(0, 4), [currentEvents]);
+  const latestEvent = currentEvents[0] ?? events[0] ?? null;
   const selectedGateInfo = GATES.find((gate) => gate.id === selectedGate) ?? GATES[0];
   const syncLabel = generatedAt.startsWith("1970-01-01") ? "No sync yet" : `Updated ${relative(generatedAt)}`;
 
@@ -303,7 +305,7 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
               </div>
               <div>
                 <span>Review</span>
-                <b>{counters.pending}</b>
+                <b>{reviewEvents.length}</b>
               </div>
             </div>
           </div>
@@ -410,7 +412,7 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
                   </div>
                   <div className="kpi-card">
                     <div className="eyebrow">Needs review</div>
-                    <div className="kpi-value">{counters.pending}</div>
+                    <div className="kpi-value">{reviewEvents.length}</div>
                     <div className="kpi-meta">Cars waiting at the gate</div>
                   </div>
                   <div className="kpi-card">
