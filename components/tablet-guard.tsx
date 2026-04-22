@@ -256,7 +256,11 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
     setDecisionMessage(message);
     setDecisionTone("success");
     setRegisteringEventKey(null);
-    await refreshSurface();
+    try {
+      await syncLatest();
+    } catch {
+      await refreshSurface();
+    }
   };
 
   const applyRegisterDraftFromEvent = (event: AccessEvent | null) => {

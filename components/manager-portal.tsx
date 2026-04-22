@@ -233,7 +233,11 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
     setDecisionMessage(message);
     setDecisionTone("success");
     setRegisteringEventKey(null);
-    await refreshSurface();
+    try {
+      await syncLatest();
+    } catch {
+      await refreshSurface();
+    }
   };
 
   return (
