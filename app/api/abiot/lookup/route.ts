@@ -11,6 +11,18 @@ function registrationState(status: string | null): string {
   return "allowed";
 }
 
+function lookupWebsitePayload(registration: Registration) {
+  if (registration.websitePayload && Object.keys(registration.websitePayload).length > 0) {
+    return registration.websitePayload;
+  }
+
+  return {
+    ...(registration.plate ? { plate: registration.plate } : {}),
+    ...(registration.kind ? { kind: registration.kind } : {}),
+    ...(registration.subjectMeta ? { notes: registration.subjectMeta } : {}),
+  };
+}
+
 function synthesizeLookupFromRegistration(epc: string, registration: Registration) {
   return {
     success: true,
@@ -21,11 +33,7 @@ function synthesizeLookupFromRegistration(epc: string, registration: Registratio
       uhf_tid: registration.tid,
       label: registration.label,
       state: registrationState(registration.status),
-      website: {
-        plate: registration.plate,
-        kind: registration.kind,
-        notes: registration.subjectMeta,
-      },
+      website: lookupWebsitePayload(registration),
     },
   };
 }

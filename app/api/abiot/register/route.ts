@@ -116,6 +116,12 @@ export async function POST(request: Request) {
       mode: context.mode,
       gateId: context.gateId,
       direction: context.direction,
+      ownerName: input.ownerName,
+      vehicleName: input.vehicleName,
+      location: input.location,
+      photoUrl: input.photoUrl,
+      websiteUrl: input.websiteUrl,
+      websitePayload: website,
       materializeEvent: !input.eventKey,
     });
 

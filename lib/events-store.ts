@@ -29,6 +29,12 @@ interface RegistrationRow {
   mode: "handheld" | "antenna";
   gate_id: string;
   direction: "entry" | "exit";
+  owner_name: string | null;
+  vehicle_name: string | null;
+  location: string | null;
+  photo_url: string | null;
+  website_url: string | null;
+  website_payload: Record<string, unknown>;
   updated_at: string;
 }
 
@@ -170,6 +176,13 @@ function registrationKey(epc: string) {
 }
 
 function registrationRowFromSupabase(row: Record<string, unknown>): RegistrationRow {
+  const websitePayload =
+    typeof row.website_payload === "object" &&
+    row.website_payload !== null &&
+    !Array.isArray(row.website_payload)
+      ? (row.website_payload as Record<string, unknown>)
+      : {};
+
   return {
     epc: String(row.epc ?? "").trim().toUpperCase(),
     tid: row.tid ? String(row.tid) : null,
@@ -183,6 +196,12 @@ function registrationRowFromSupabase(row: Record<string, unknown>): Registration
     mode: row.mode === "antenna" ? "antenna" : "handheld",
     gate_id: row.gate_id ? String(row.gate_id) : "gate-main-entry",
     direction: row.direction === "exit" ? "exit" : "entry",
+    owner_name: row.owner_name ? String(row.owner_name) : null,
+    vehicle_name: row.vehicle_name ? String(row.vehicle_name) : null,
+    location: row.location ? String(row.location) : null,
+    photo_url: row.photo_url ? String(row.photo_url) : null,
+    website_url: row.website_url ? String(row.website_url) : null,
+    website_payload: websitePayload,
     updated_at: row.updated_at ? String(row.updated_at) : new Date().toISOString(),
   };
 }
@@ -209,6 +228,12 @@ async function upsertRegistrationInSupabase(registration: RegistrationRow) {
           mode: registration.mode,
           gate_id: registration.gate_id,
           direction: registration.direction,
+          owner_name: registration.owner_name,
+          vehicle_name: registration.vehicle_name,
+          location: registration.location,
+          photo_url: registration.photo_url,
+          website_url: registration.website_url,
+          website_payload: registration.website_payload,
           updated_at: registration.updated_at,
         },
       ],
@@ -256,7 +281,8 @@ async function fetchAllRegistrationsFromSupabase(): Promise<RegistrationRow[]> {
  * Called by the converter as a fallback when the ABIOT API returns no match,
  * and by the lookup proxy so the scanner can discover web-only registrations.
  *
- * Reads Supabase first so registrations survive Render restarts (ephemeral FS).
+ * Reads the in-memory cache first, then falls back to Supabase so
+ * registrations survive Render restarts (ephemeral FS).
  * Populates the in-memory cache on a Supabase hit.
  */
 export async function findRegistrationByEpc(epc: string): Promise<{
@@ -267,6 +293,7 @@ export async function findRegistrationByEpc(epc: string): Promise<{
   plate: string | null;
   tid: string | null;
   reason: string | null;
+  websitePayload: Record<string, unknown> | null;
 } | null> {
   const normalized = epc.trim().toUpperCase();
   if (!normalized) {
@@ -302,6 +329,7 @@ export async function findRegistrationByEpc(epc: string): Promise<{
     plate: registration.plate,
     tid: registration.tid,
     reason: registration.reason,
+    websitePayload: Object.keys(registration.website_payload).length > 0 ? registration.website_payload : null,
   };
 }
 
@@ -582,6 +610,12 @@ export async function upsertVehicleRegistration(input: {
   mode?: "handheld" | "antenna";
   gateId?: string;
   direction?: "entry" | "exit";
+  ownerName?: string | null;
+  vehicleName?: string | null;
+  location?: string | null;
+  photoUrl?: string | null;
+  websiteUrl?: string | null;
+  websitePayload?: Record<string, unknown> | null;
   materializeEvent?: boolean;
 }) {
   const epc = input.epc.trim().toUpperCase();
@@ -604,8 +638,16 @@ export async function upsertVehicleRegistration(input: {
     mode: input.mode === "antenna" ? "antenna" : "handheld",
     gate_id: input.gateId?.trim() || "gate-main-entry",
     direction: input.direction === "exit" ? "exit" : "entry",
+    owner_name: input.ownerName?.trim() || null,
+    vehicle_name: input.vehicleName?.trim() || null,
+    location: input.location?.trim() || null,
+    photo_url: input.photoUrl?.trim() || null,
+    website_url: input.websiteUrl?.trim() || null,
+    website_payload: input.websitePayload ?? {},
     updated_at: new Date().toISOString(),
   };
+
+  await upsertRegistrationInSupabase(registration);
 
   const store = await getReadyMemoryStore();
   const existingIndex = store.registrations.findIndex((item) => item.epc === registration.epc);
@@ -617,12 +659,6 @@ export async function upsertVehicleRegistration(input: {
 
   const event = input.materializeEvent === false ? null : await materializeRegistrationEvent(store, registration);
   saveMemoryStoreToDisk(store);
-
-  try {
-    await upsertRegistrationInSupabase(registration);
-  } catch (registrationError) {
-    console.error("Failed to persist vehicle registration to Supabase", registrationError);
-  }
 
   if (event) {
     await upsertAccessEventsInSupabase([event]);
