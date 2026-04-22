@@ -195,16 +195,18 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
     };
   }, [directoryEvents]);
   const latest = useMemo(() => {
+    const mostRecent = [...events].sort(
+      (a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime(),
+    );
     if (!selectedEventKey) {
-      return reviewEvents[0] ?? currentEvents[0] ?? events[0] ?? null;
+      return mostRecent[0] ?? null;
     }
-    return currentEvents.find((event) => event.eventKey === selectedEventKey)
-      || events.find((event) => event.eventKey === selectedEventKey)
-      || reviewEvents[0]
-      || currentEvents[0]
-      || events[0]
-      || null;
-  }, [currentEvents, events, reviewEvents, selectedEventKey]);
+    return (
+      mostRecent.find((event) => event.eventKey === selectedEventKey)
+      ?? mostRecent[0]
+      ?? null
+    );
+  }, [events, selectedEventKey]);
   const syncLabel = generatedAt.startsWith("1970-01-01") ? "No sync yet" : `Updated ${relative(generatedAt)}`;
 
   const submitScan = async (event: FormEvent<HTMLFormElement>) => {
@@ -1143,26 +1145,15 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                         </button>
                       </div>
 
-                      <div className="grid grid-2">
-                        <div className="form-group">
-                          <label>EPC *</label>
-                          <input
-                            className="input mono mt-2"
-                            value={registerEpc}
-                            onChange={(inputEvent) => setRegisterEpc(inputEvent.target.value.toUpperCase())}
-                            placeholder="E2806995000050008D040962"
-                            required
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label>TID</label>
-                          <input
-                            className="input mono mt-2"
-                            value={registerTid}
-                            onChange={(inputEvent) => setRegisterTid(inputEvent.target.value.toUpperCase())}
-                            placeholder="Recovered from scan if known"
-                          />
-                        </div>
+                      <div className="form-group">
+                        <label>EPC *</label>
+                        <input
+                          className="input mono mt-2"
+                          value={registerEpc}
+                          onChange={(inputEvent) => setRegisterEpc(inputEvent.target.value.toUpperCase())}
+                          placeholder="E2806995000050008D040962"
+                          required
+                        />
                       </div>
 
                       <div className="grid grid-2">
@@ -1245,12 +1236,9 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                         />
                       </div>
 
-                      <div className="row-wrap" style={{ justifyContent: "space-between", alignItems: "center" }}>
-                        <div className="muted small">
-                          Leave TID blank only if the EPC has already been scanned and the tablet can recover it.
-                        </div>
+                      <div className="row-wrap" style={{ justifyContent: "flex-end", alignItems: "center" }}>
                         <button type="submit" className="btn primary" disabled={isRegisterSubmitting} style={{ justifyContent: "center" }}>
-                          <Icon name="plus" size={14} /> {isRegisterSubmitting ? "Saving..." : "Save vehicle to ABIOT"}
+                          <Icon name="plus" size={14} /> {isRegisterSubmitting ? "Saving..." : "Save vehicle"}
                         </button>
                       </div>
 
@@ -1275,9 +1263,9 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                     <div className="stack" style={{ gap: 14 }}>
                       <div className="card" style={{ background: "var(--surface-alt)" }}>
                         <div className="card-body">
-                          <strong>1. Save to ABIOT</strong>
+                          <strong>1. Save the vehicle</strong>
                           <div className="muted small mt-2">
-                            This writes the EPC, TID, label, owner, vehicle, plate, location, kind, and notes to the same ABIOT update endpoint used by the scanner flow.
+                            This writes the EPC, label, owner, vehicle, plate, location, kind, and notes to the shared registry used by the tablet and manager.
                           </div>
                         </div>
                       </div>
@@ -1285,7 +1273,7 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                         <div className="card-body">
                           <strong>2. Reuse scanned EPCs</strong>
                           <div className="muted small mt-2">
-                            Use the buttons above to pull the EPC and TID from the manual scan box, the latest card, or the currently focused queue card.
+                            Use the buttons above to pull the EPC from the manual scan box, the latest card, or the currently focused queue card.
                           </div>
                         </div>
                       </div>

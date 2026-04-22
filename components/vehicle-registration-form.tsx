@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 import { registerVehicleViaApi } from "@/lib/client-api";
 import { Icon } from "@/lib/ui";
 import type { AccessEvent } from "@/lib/types";
@@ -38,13 +38,13 @@ export function VehicleRegistrationForm({
   allowIdentityEdit = true,
   compact = false,
   title = "Register vehicle",
-  description = "Save this EPC to the live vehicle registry. If TID is known, it will also sync to ABIOT for future scans.",
+  description = "Save this EPC to the live vehicle registry so the tablet, manager, and scanner all recognise it on the next read.",
   submitLabel = "Save vehicle",
   onCancel,
   onSuccess,
 }: VehicleRegistrationFormProps) {
   const [epc, setEpc] = useState((initialEpc || initialEvent?.epc || "").toUpperCase());
-  const [tid, setTid] = useState(initialTid || initialEvent?.tid || "");
+  const tid = initialTid || initialEvent?.tid || "";
   const [label, setLabel] = useState(normalizeInitialLabel(initialLabel || initialEvent?.subjectName));
   const [ownerName, setOwnerName] = useState("");
   const [vehicleName, setVehicleName] = useState("");
@@ -56,13 +56,6 @@ export function VehicleRegistrationForm({
   const [message, setMessage] = useState<string | null>(null);
   const [tone, setTone] = useState<"success" | "danger" | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const helperText = useMemo(() => {
-    if (tid.trim()) {
-      return "TID is available, so this record can be written back to ABIOT immediately.";
-    }
-    return "TID is optional. If it is blank, the web saves by EPC now and will sync to ABIOT once a TID is known.";
-  }, [tid]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -104,7 +97,6 @@ export function VehicleRegistrationForm({
 
       if (!initialEvent) {
         setEpc("");
-        setTid("");
         setLabel("");
         setOwnerName("");
         setVehicleName("");
@@ -131,29 +123,15 @@ export function VehicleRegistrationForm({
         <div className="muted small mt-2">{description}</div>
       </div>
 
-      <div className={compact ? "grid grid-2" : "stack"} style={{ gap: 12 }}>
-        <div className="form-group">
-          <label className="text-sm font-semibold">EPC *</label>
-          <input
-            className="input mono mt-1"
-            value={epc}
-            onChange={(inputEvent) => setEpc(inputEvent.target.value.toUpperCase())}
-            readOnly={!allowIdentityEdit}
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <label className="text-sm font-semibold">TID</label>
-          <input
-            className="input mono mt-1"
-            value={tid}
-            onChange={(inputEvent) => setTid(inputEvent.target.value.toUpperCase())}
-            readOnly={!allowIdentityEdit}
-            placeholder="Recovered automatically when available"
-          />
-          <div className="muted small mt-2">{helperText}</div>
-        </div>
+      <div className="form-group">
+        <label className="text-sm font-semibold">EPC *</label>
+        <input
+          className="input mono mt-1"
+          value={epc}
+          onChange={(inputEvent) => setEpc(inputEvent.target.value.toUpperCase())}
+          readOnly={!allowIdentityEdit}
+          required
+        />
       </div>
 
       <div className={compact ? "grid grid-2" : "stack"} style={{ gap: 12 }}>

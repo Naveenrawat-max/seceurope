@@ -171,7 +171,8 @@ function registrationKey(epc: string) {
 
 /**
  * Look up a previously registered vehicle by EPC.
- * Called by the converter as a fallback when the ABIOT API returns no match.
+ * Called by the converter as a fallback when the ABIOT API returns no match,
+ * and by the lookup proxy so the scanner can discover web-only registrations.
  */
 export function findRegistrationByEpc(epc: string): {
   label: string;
@@ -182,11 +183,7 @@ export function findRegistrationByEpc(epc: string): {
   tid: string | null;
   reason: string | null;
 } | null {
-  const globalState = globalThis as unknown as Record<string, unknown>;
-  const store = globalState[MEMORY_STORE_KEY] as MemoryStore | undefined;
-  if (!store || !Array.isArray(store.registrations)) {
-    return null;
-  }
+  const store = getMemoryStore();
   const normalized = epc.trim().toUpperCase();
   const registration = store.registrations.find((r) => r.epc === normalized);
   if (!registration) {
