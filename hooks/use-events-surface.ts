@@ -69,20 +69,28 @@ export function useEventsSurface(surface: "manager" | "tablet", gateId?: string,
     liveTransportRef.current = liveTransport;
   }, [liveTransport]);
 
+  const lastSignatureRef = useRef<string>("");
+
   const refresh = useCallback(async (source: "initial" | "manual" | "live" | "poll" = "manual") => {
     if (inFlightRef.current) {
       return;
     }
 
     inFlightRef.current = true;
-    if (source !== "initial") {
+    if (source === "manual") {
       setRefreshing(true);
     }
 
     try {
       const nextState = await fetchEventsFromApi(surface, gateId);
       hasLiveDataRef.current = true;
-      setState(nextState);
+
+      const signature = `${nextState.events.length}|${nextState.events[0]?.eventKey ?? ""}|${nextState.events[0]?.ts ?? ""}|${nextState.counters.total}|${nextState.counters.pending}`;
+      if (signature !== lastSignatureRef.current) {
+        lastSignatureRef.current = signature;
+        setState(nextState);
+      }
+
       setError(null);
       if (liveTransportRef.current !== "websocket") {
         setLiveTransport("polling");
@@ -121,16 +129,32 @@ export function useEventsSurface(surface: "manager" | "tablet", gateId?: string,
   }, [initialData, refresh]);
 
   useEffect(() => {
+    const fastInterval = 2_500;
+    const safetyInterval = 20_000;
+    const intervalMs = liveTransport === "websocket" ? safetyInterval : fastInterval;
     const pollTimer = window.setInterval(() => {
-      if (liveTransport !== "websocket") {
-        void refresh("poll");
-      }
-    }, 10_000);
+      void refresh("poll");
+    }, intervalMs);
 
     return () => {
       window.clearInterval(pollTimer);
     };
   }, [liveTransport, refresh]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onFocus = () => {
+      if (document.visibilityState === "visible") {
+        void refresh("poll");
+      }
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [refresh]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
