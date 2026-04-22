@@ -10,6 +10,10 @@
   --brand-primary-line: rgba(232, 90, 30, 0.32);
   --brand-accent: #FFB673;
   --brand-ink: #0C1A17;
+  --brand-gradient: linear-gradient(135deg, #F17338 0%, #FFB673 52%, #FFE5CB 100%);
+  --brand-gradient-soft: linear-gradient(135deg, rgba(232, 90, 30, 0.18), rgba(255, 182, 115, 0.08));
+  --brand-gradient-dark: linear-gradient(135deg, rgba(232, 90, 30, 0.28), rgba(255, 182, 115, 0.12));
+  --brand-glow: rgba(232, 90, 30, 0.22);
 
   /* Surfaces */
   --canvas: #F2EEE5;
@@ -20,6 +24,10 @@
   --surface-dark: #0E1A17;
   --surface-dark-alt: #142421;
   --surface-dark-raised: #1B2E29;
+  --glass-light: rgba(255, 255, 255, 0.72);
+  --glass-light-strong: rgba(255, 255, 255, 0.82);
+  --glass-dark: rgba(255, 255, 255, 0.06);
+  --glass-dark-strong: rgba(255, 255, 255, 0.1);
 
   /* Borders */
   --border-subtle: rgba(14, 26, 23, 0.06);
@@ -65,10 +73,10 @@
   --radius-xl: 20px;
 
   /* Elevation */
-  --shadow-1: 0 1px 2px rgba(14, 26, 23, 0.05);
-  --shadow-2: 0 2px 6px rgba(14, 26, 23, 0.07);
-  --shadow-3: 0 10px 28px rgba(14, 26, 23, 0.12);
-  --shadow-4: 0 24px 60px rgba(0, 0, 0, 0.28);
+  --shadow-1: 0 1px 3px rgba(14, 26, 23, 0.06);
+  --shadow-2: 0 14px 34px rgba(14, 26, 23, 0.09);
+  --shadow-3: 0 22px 52px rgba(14, 26, 23, 0.14);
+  --shadow-4: 0 30px 72px rgba(0, 0, 0, 0.28);
 
   /* Type */
   --font-body: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
@@ -135,4 +143,49 @@ a {
 ::selection {
   background: var(--brand-primary-soft);
   color: var(--brand-ink);
+}
+
+.glass-panel {
+  background: linear-gradient(180deg, var(--glass-light-strong), var(--glass-light));
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-2);
+}
+
+.glass-panel-dark {
+  background: linear-gradient(180deg, var(--glass-dark-strong), var(--glass-dark));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-3);
+}
+
+.glass-panel-warm {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.68)),
+    var(--brand-gradient-soft);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-2);
+}
+
+.brand-gradient-text {
+  background-image: var(--brand-gradient);
+  color: transparent;
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

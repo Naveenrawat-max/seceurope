@@ -96,10 +96,9 @@
 }
 
 .hero-side {
-  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.02);
   padding: 22px;
+  overflow: hidden;
 }
 
 .hero-side .eyebrow { color: var(--text-inverse-muted); }
@@ -117,6 +116,10 @@
   gap: 12px;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.88);
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.04);
 }
 .hero-side li .num {
   display: grid;
@@ -130,6 +133,10 @@
   font-size: 11px;
   font-family: var(--font-mono);
   flex-shrink: 0;
+}
+
+.app-tile-shell {
+  height: 100%;
 }
 
 .hub-apps {
@@ -147,12 +154,15 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
   padding: 28px;
-  background: rgba(255, 255, 255, 0.02);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)),
+    var(--brand-gradient-dark);
   color: inherit;
-  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 180ms ease;
   position: relative;
   overflow: hidden;
   min-height: 340px;
+  box-shadow: var(--shadow-2);
 }
 
 .app-tile::before {
@@ -166,9 +176,11 @@
 }
 
 .app-tile:hover {
-  transform: translateY(-4px);
   border-color: rgba(232, 90, 30, 0.42);
-  background: rgba(255, 255, 255, 0.04);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04)),
+    var(--brand-gradient-dark);
+  box-shadow: var(--shadow-3);
 }
 
 .app-tile:hover::before { transform: translateY(0); }

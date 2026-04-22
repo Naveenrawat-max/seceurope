@@ -107,8 +107,10 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   padding: 14px;
-  background: rgba(255, 255, 255, 0.02);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
   font-size: 12.5px;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(16px);
 }
 
 .mgr-side .side-card strong {
@@ -148,7 +150,9 @@
 
 .mgr-main {
   min-width: 0;
-  background: linear-gradient(180deg, rgba(247, 244, 236, 1), rgba(242, 238, 229, 1));
+  background:
+    radial-gradient(circle at 12% 0%, rgba(232, 90, 30, 0.08), transparent 26%),
+    linear-gradient(180deg, rgba(247, 244, 236, 1), rgba(242, 238, 229, 1));
   display: flex;
   flex-direction: column;
 }
@@ -159,12 +163,15 @@
   justify-content: space-between;
   gap: 18px;
   padding: 18px 28px;
-  background: rgba(255, 255, 255, 0.74);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.7)),
+    var(--brand-gradient-soft);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-default);
   position: sticky;
   top: 0;
   z-index: 30;
+  box-shadow: 0 12px 30px rgba(14, 26, 23, 0.08);
 }
 
 .mgr-topbar h1 {
@@ -341,9 +348,13 @@
   background: linear-gradient(135deg, rgba(200, 145, 37, 0.08), rgba(255, 255, 255, 1));
   border-radius: 10px;
   position: relative;
+  transition: box-shadow 160ms ease, transform 160ms ease;
 }
 
-.review-card:hover { box-shadow: var(--shadow-2); }
+.review-card:hover {
+  box-shadow: var(--shadow-2);
+  transform: translateY(-2px);
+}
 
 .review-actions {
   display: flex;

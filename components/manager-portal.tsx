@@ -1,8 +1,11 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
+import { AnimatedNumber } from "@/components/animated-number";
 import { VehicleRegistrationForm } from "@/components/vehicle-registration-form";
+import { containerVariants, itemVariants, listItemVariants, liveBadgeAnimation, motionTransitions, tabPanelVariants } from "@/lib/motion-variants";
 import { GATES, READERS } from "@/lib/demo-data";
 import { latestEventsByEpc } from "@/lib/event-views";
 import { useEventsSurface } from "@/hooks/use-events-surface";
@@ -115,6 +118,7 @@ function canRegisterVehicle(event: AccessEvent) {
 }
 
 export function ManagerPortal({ initialData }: { initialData: EventsResponse }) {
+  const reducedMotion = useReducedMotion() ?? false;
   const [activeTab, setActiveTab] = useState<ManagerTab>("overview");
   const [selectedGate, setSelectedGate] = useState<string>("gate-main-entry");
   const [fetchEpcDraft, setFetchEpcDraft] = useState("");
@@ -157,6 +161,10 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
   const latestEvent = currentEvents[0] ?? events[0] ?? null;
   const selectedGateInfo = GATES.find((gate) => gate.id === selectedGate) ?? GATES[0];
   const syncLabel = generatedAt.startsWith("1970-01-01") ? "No sync yet" : `Updated ${relative(generatedAt)}`;
+  const liveTone = liveBadgeTone(liveStatus);
+  const sectionVariants = containerVariants(reducedMotion, { stagger: 0.05, delayChildren: 0.03 });
+  const cardVariants = itemVariants(reducedMotion, { distance: 14 });
+  const queueItemMotion = listItemVariants(reducedMotion);
 
   const subtitle = {
     overview: `Real-time view across all gates - ${events.length} scans buffered`,
@@ -242,7 +250,11 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
 
   return (
     <div className="mgr-body">
-      <div className="mgr-shell">
+      <motion.div
+        className="mgr-shell"
+        initial={reducedMotion ? { opacity: 1 } : { opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0, transition: motionTransitions.panel }}
+      >
         <aside className="mgr-side">
           <div className="mgr-brand">
             <div className="mark">Se</div>
@@ -291,7 +303,7 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
 
           <div className="spacer" />
 
-          <div className="side-card">
+          <div className="side-card glass-panel-dark">
             <div className="row-between">
               <strong>Shared state</strong>
               <span className="row" style={{ gap: 6 }}>
@@ -314,7 +326,7 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
             </div>
           </div>
 
-          <div className="side-card">
+          <div className="side-card glass-panel-dark">
             <div className="row" style={{ gap: 10 }}>
               <div className="avatar" style={{ background: "rgba(255,255,255,0.06)", color: "white" }}>
                 RA
@@ -330,16 +342,19 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
         </aside>
 
         <main className="mgr-main">
-          <header className="mgr-topbar">
+          <header className="mgr-topbar glass-panel-warm">
             <div>
               <h1>{titleFor(activeTab)}</h1>
               <p>{subtitle}</p>
             </div>
             <div className="row" style={{ gap: 10 }}>
-              <span className={`badge ${liveBadgeTone(liveStatus)}`}>
-                <span className={`dot ${liveBadgeTone(liveStatus) === "success" ? "live" : liveBadgeTone(liveStatus) === "danger" ? "danger" : "warn"}`} />
+              <motion.span
+                className={`badge ${liveTone} live-status-badge`}
+                animate={liveBadgeAnimation(reducedMotion, liveStatus === "live")}
+              >
+                <span className={`dot ${liveTone === "danger" ? "danger" : liveTone === "warn" ? "warn" : ""}`} />
                 {liveBadgeLabel(liveStatus, liveTransport)}
-              </span>
+              </motion.span>
               <span className="badge outline">
                 <Icon name="clock" size={12} /> {formatTime(clock)}
               </span>
@@ -401,30 +416,44 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
               </div>
             ) : null}
 
+            <AnimatePresence mode="wait" initial={false}>
             {activeTab === "overview" ? (
-              <>
-                <section className="kpi-strip">
-                  <div className="kpi-card accent">
+              <motion.div
+                key="overview"
+                className="motion-tab-panel"
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={tabPanelVariants(reducedMotion)}
+              >
+                <motion.section className="kpi-strip" initial="hidden" animate="visible" variants={sectionVariants}>
+                  <motion.div className="kpi-card accent" variants={cardVariants}>
                     <div className="eyebrow">Scans today</div>
-                    <div className="kpi-value">{counters.total}</div>
+                    <div className="kpi-value">
+                      <AnimatedNumber className="animated-number" value={counters.total} />
+                    </div>
                     <div className="kpi-meta">All RFID events captured</div>
-                  </div>
-                  <div className="kpi-card">
+                  </motion.div>
+                  <motion.div className="kpi-card" variants={cardVariants}>
                     <div className="eyebrow">Auto-allowed</div>
-                    <div className="kpi-value">{counters.allowed}</div>
+                    <div className="kpi-value">
+                      <AnimatedNumber className="animated-number" value={counters.allowed} />
+                    </div>
                     <div className="kpi-meta">Resident - guest - worker</div>
-                  </div>
-                  <div className="kpi-card">
+                  </motion.div>
+                  <motion.div className="kpi-card" variants={cardVariants}>
                     <div className="eyebrow">Needs review</div>
-                    <div className="kpi-value">{reviewEvents.length}</div>
+                    <div className="kpi-value">
+                      <AnimatedNumber className="animated-number" value={reviewEvents.length} />
+                    </div>
                     <div className="kpi-meta">Cars waiting at the gate</div>
-                  </div>
-                  <div className="kpi-card">
+                  </motion.div>
+                  <motion.div className="kpi-card" variants={cardVariants}>
                     <div className="eyebrow">Realtime</div>
                     <div className="kpi-value">Live</div>
                     <div className="kpi-meta">Supabase channels active</div>
-                  </div>
-                </section>
+                  </motion.div>
+                </motion.section>
 
                 <section className="split">
                   <div className="card">
@@ -437,9 +466,19 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
                     </div>
                     <div className="card-body">
                       {recentCardEvents.length ? (
-                        <div className="event-card-grid">
+                        <motion.div className="event-card-grid" layout transition={motionTransitions.layout}>
+                          <AnimatePresence initial={false}>
                           {recentCardEvents.map((event) => (
-                            <div className={`event-card ${event.status}`} key={`recent-${event.eventKey}`}>
+                            <motion.div
+                              className={`event-card ${event.status}`}
+                              key={`recent-${event.eventKey}`}
+                              layout
+                              variants={queueItemMotion}
+                              initial="initial"
+                              animate="animate"
+                              exit="exit"
+                              transition={motionTransitions.layout}
+                            >
                               <div className="row-between">
                                 <div className="row" style={{ gap: 12, alignItems: "flex-start" }}>
                                   {avatarFor(event)}
@@ -504,9 +543,10 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
                                   />
                                 </div>
                               ) : null}
-                            </div>
+                            </motion.div>
                           ))}
-                        </div>
+                          </AnimatePresence>
+                        </motion.div>
                       ) : (
                         emptyState("No cards yet", "Use the fetch form to create a fresh card from an EPC.")
                       )}
@@ -556,9 +596,19 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
                     </div>
                     <div className="card-body tight">
                       {reviewEvents.length ? (
-                        <div className="stack">
+                        <motion.div className="stack" layout transition={motionTransitions.layout}>
+                          <AnimatePresence initial={false}>
                           {reviewEvents.slice(0, 4).map((event) => (
-                            <div className="review-card" key={event.eventKey}>
+                            <motion.div
+                              className="review-card"
+                              key={event.eventKey}
+                              layout
+                              variants={queueItemMotion}
+                              initial="initial"
+                              animate="animate"
+                              exit="exit"
+                              transition={motionTransitions.layout}
+                            >
                               <div className="row-between">
                                 <div className="row" style={{ gap: 12, alignItems: "flex-start" }}>
                                   {avatarFor(event)}
@@ -614,9 +664,10 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
                                   />
                                 </div>
                               ) : null}
-                            </div>
+                            </motion.div>
                           ))}
-                        </div>
+                          </AnimatePresence>
+                        </motion.div>
                       ) : (
                         emptyState("No cars waiting", "Every scan has been cleared. Nice and quiet.")
                       )}
@@ -834,10 +885,18 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
                     </div>
                   </div>
                 </section>
-              </>
+              </motion.div>
             ) : null}
 
             {activeTab === "feed" ? (
+              <motion.div
+                key="feed"
+                className="motion-tab-panel"
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={tabPanelVariants(reducedMotion)}
+              >
               <div className="card">
                 <div className="card-header">
                   <div>
@@ -851,8 +910,17 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
                 </div>
                 <div className="card-body" style={{ padding: 0 }}>
                   <div className="list">
+                    <AnimatePresence initial={false}>
                     {events.map((event) => (
-                      <div className="list-row" key={event.eventKey}>
+                      <motion.div
+                        className="list-row"
+                        key={event.eventKey}
+                        layout="position"
+                        variants={queueItemMotion}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                      >
                         <div className="left row" style={{ gap: 12, alignItems: "flex-start", flex: 1 }}>
                           {avatarFor(event)}
                           <div className="min-w-0 flex-1">
@@ -874,14 +942,24 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
                           <div className="mono small">{formatTime(event.ts)}</div>
                           <div className="muted small mt-2">{relative(event.ts)}</div>
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
+                    </AnimatePresence>
                   </div>
                 </div>
               </div>
+              </motion.div>
             ) : null}
 
             {activeTab === "queue" ? (
+              <motion.div
+                key="queue"
+                className="motion-tab-panel"
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={tabPanelVariants(reducedMotion)}
+              >
               <div className="card card-accent">
                 <div className="card-header">
                   <div>
@@ -892,9 +970,19 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
                 </div>
                 <div className="card-body">
                   {reviewEvents.length ? (
-                    <div className="grid grid-2">
+                    <motion.div className="grid grid-2" layout transition={motionTransitions.layout}>
+                      <AnimatePresence initial={false}>
                       {reviewEvents.map((event) => (
-                        <div className="review-card" key={event.eventKey}>
+                        <motion.div
+                          className="review-card"
+                          key={event.eventKey}
+                          layout
+                          variants={queueItemMotion}
+                          initial="initial"
+                          animate="animate"
+                          exit="exit"
+                          transition={motionTransitions.layout}
+                        >
                           <div className="row-between">
                             <div className="row" style={{ gap: 12, alignItems: "flex-start" }}>
                               {avatarFor(event)}
@@ -947,17 +1035,27 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
                               />
                             </div>
                           ) : null}
-                        </div>
+                        </motion.div>
                       ))}
-                    </div>
+                      </AnimatePresence>
+                    </motion.div>
                   ) : (
                     emptyState("All clear", "No review events at the moment. Every car has been cleared.")
                   )}
                 </div>
               </div>
+              </motion.div>
             ) : null}
 
             {activeTab === "map" ? (
+              <motion.div
+                key="map"
+                className="motion-tab-panel"
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={tabPanelVariants(reducedMotion)}
+              >
               <div className="card">
                 <div className="card-header">
                   <div>
@@ -1005,21 +1103,38 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
                     {GATES.map((gate) => {
                       const scans = events.filter((event) => event.gateId === gate.id).length;
                       return (
-                        <div className={`kpi-card ${selectedGate === gate.id ? "accent" : ""}`} key={gate.id}>
+                        <motion.div
+                          className={`kpi-card ${selectedGate === gate.id ? "accent" : ""}`}
+                          key={gate.id}
+                          initial="hidden"
+                          animate="visible"
+                          variants={cardVariants}
+                        >
                           <div className="eyebrow">{gate.short}</div>
-                          <div className="kpi-value">{scans}</div>
+                          <div className="kpi-value">
+                            <AnimatedNumber className="animated-number" value={scans} />
+                          </div>
                           <div className="kpi-meta">
                             {gate.lane} - {gate.kind}
                           </div>
-                        </div>
+                        </motion.div>
                       );
                     })}
                   </div>
                 </div>
               </div>
+              </motion.div>
             ) : null}
 
             {activeTab === "residents" ? (
+              <motion.div
+                key="residents"
+                className="motion-tab-panel"
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={tabPanelVariants(reducedMotion)}
+              >
               <div className="grid grid-2">
                 <div className="card card-accent">
                   <div className="card-header">
@@ -1050,8 +1165,17 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
                   </div>
                   <div className="card-body" style={{ padding: 0 }}>
                     <div className="list">
+                      <AnimatePresence initial={false}>
                       {events.map((event) => (
-                        <div className="list-row" key={event.eventKey}>
+                        <motion.div
+                          className="list-row"
+                          key={event.eventKey}
+                          layout="position"
+                          variants={queueItemMotion}
+                          initial="initial"
+                          animate="animate"
+                          exit="exit"
+                        >
                           <div className="left row" style={{ gap: 12, alignItems: "center" }}>
                             <div className={`avatar ${avatarClassForKind(event.kind)}`}>{initials(event.subjectName)}</div>
                             <div>
@@ -1064,15 +1188,25 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
                             {kindBadge(event.kind)}
                             <div className="muted mt-2">{event.plate || "-"}</div>
                           </div>
-                        </div>
+                        </motion.div>
                       ))}
+                      </AnimatePresence>
                     </div>
                   </div>
                 </div>
               </div>
+              </motion.div>
             ) : null}
 
             {activeTab === "readers" ? (
+              <motion.div
+                key="readers"
+                className="motion-tab-panel"
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={tabPanelVariants(reducedMotion)}
+              >
               <div className="card">
                 <div className="card-header">
                   <div>
@@ -1083,7 +1217,7 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
                 </div>
                 <div className="card-body" style={{ padding: 0 }}>
                   {READERS.map((reader) => (
-                    <div className="reader-card" key={reader.id}>
+                    <motion.div className="reader-card" key={reader.id} initial="hidden" animate="visible" variants={cardVariants}>
                       <div className="reader-icon">
                         <Icon name={reader.type === "antenna" ? "antenna" : "radio"} size={20} />
                       </div>
@@ -1106,13 +1240,22 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
                         </div>
                         <div className="mono muted small mt-2">{reader.rssi} dBm</div>
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               </div>
+              </motion.div>
             ) : null}
 
             {activeTab === "settings" ? (
+              <motion.div
+                key="settings"
+                className="motion-tab-panel"
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={tabPanelVariants(reducedMotion)}
+              >
               <div className="grid grid-2">
                 <div className="card">
                   <div className="card-header">
@@ -1164,10 +1307,12 @@ export function ManagerPortal({ initialData }: { initialData: EventsResponse }) 
                   </div>
                 </div>
               </div>
+              </motion.div>
             ) : null}
+            </AnimatePresence>
           </div>
         </main>
-      </div>
+      </motion.div>
     </div>
   );
 }

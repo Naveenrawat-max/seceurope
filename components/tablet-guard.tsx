@@ -1,12 +1,15 @@
- "use client";
+"use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
+import { AnimatedNumber } from "@/components/animated-number";
 import { VehicleRegistrationForm } from "@/components/vehicle-registration-form";
 import { registerVehicleViaApi } from "@/lib/client-api";
 import { GATES, PRESETS, SITE_INFO } from "@/lib/demo-data";
 import { latestEventsByEpc } from "@/lib/event-views";
 import { useEventsSurface } from "@/hooks/use-events-surface";
+import { containerVariants, itemVariants, listItemVariants, liveBadgeAnimation, motionTransitions, tabPanelVariants } from "@/lib/motion-variants";
 import {
   Icon,
   avatarClassForKind,
@@ -74,16 +77,6 @@ function queueResolution(action: "open" | "call" | "visitor" | "deny", event: Ac
   };
 }
 
-function kpi(label: string, value: number | string, meta: string, accent = false) {
-  return (
-    <div className={`kpi-card ${accent ? "accent" : ""}`}>
-      <div className="eyebrow">{label}</div>
-      <div className="kpi-value">{value}</div>
-      <div className="kpi-meta">{meta}</div>
-    </div>
-  );
-}
-
 function titleFor(tab: TabletTab) {
   if (tab === "review") return "Review & action";
   if (tab === "history") return "Today's gate log";
@@ -132,6 +125,7 @@ function outcomeLabel(event: AccessEvent) {
 }
 
 export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
+  const reducedMotion = useReducedMotion() ?? false;
   const [tab, setTab] = useState<TabletTab>("review");
   const [epcDraft, setEpcDraft] = useState("E28011606000021180UN002");
   const [selectedEventKey, setSelectedEventKey] = useState<string | null>(null);
@@ -208,6 +202,10 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
     );
   }, [events, selectedEventKey]);
   const syncLabel = generatedAt.startsWith("1970-01-01") ? "No sync yet" : `Updated ${relative(generatedAt)}`;
+  const liveTone = liveBadgeTone(liveStatus);
+  const sectionVariants = containerVariants(reducedMotion, { stagger: 0.05, delayChildren: 0.03 });
+  const cardVariants = itemVariants(reducedMotion, { distance: 14 });
+  const queueItemMotion = listItemVariants(reducedMotion);
 
   const submitScan = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -351,7 +349,11 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
   return (
     <div className="tab-body">
       <div className="tab-frame">
-        <div className="tab-screen">
+        <motion.div
+          className="tab-screen"
+          initial={reducedMotion ? { opacity: 1 } : { opacity: 0, y: 16, scale: 0.99 }}
+          animate={{ opacity: 1, y: 0, scale: 1, transition: motionTransitions.panel }}
+        >
           <aside className="tab-side">
             <div className="tab-brand">
               <div className="mark">Se</div>
@@ -361,7 +363,7 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
               </div>
             </div>
 
-            <div className="tab-guard">
+            <div className="tab-guard glass-panel-dark">
               <div className="avatar" style={{ background: "rgba(232, 90, 30, 0.2)", color: "#FFB673" }}>
                 KP
               </div>
@@ -389,7 +391,7 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
 
             <div className="spacer" />
 
-            <div className="tab-side-foot">
+            <div className="tab-side-foot glass-panel-dark">
               <div className="stat-row">
                 <div>
                   <span>Scans</span>
@@ -410,16 +412,19 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
           </aside>
 
           <main className="tab-main scroll">
-            <header className="tab-head">
+            <header className="tab-head glass-panel-warm">
               <div>
                 <h1>{titleFor(tab)}</h1>
                 <p>{subtitleFor(tab)}</p>
               </div>
               <div className="row-wrap">
-                <span className={`badge ${liveBadgeTone(liveStatus)}`}>
-                  <span className={`dot ${liveBadgeTone(liveStatus) === "success" ? "live" : liveBadgeTone(liveStatus) === "danger" ? "danger" : "warn"}`} />
+                <motion.span
+                  className={`badge ${liveTone} live-status-badge`}
+                  animate={liveBadgeAnimation(reducedMotion, liveStatus === "live")}
+                >
+                  <span className={`dot ${liveTone === "danger" ? "danger" : liveTone === "warn" ? "warn" : ""}`} />
                   {liveBadgeLabel(liveStatus, liveTransport)}
-                </span>
+                </motion.span>
                 <span className="badge outline">
                   <Icon name="clock" size={12} /> {formatTime(clock)}
                 </span>
@@ -455,12 +460,36 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
               </div>
             </header>
 
-            <section className="tab-kpis">
-              {kpi("Cars today", counters.total, "Entry + exit")}
-              {kpi("Auto-allowed", counters.allowed, "Resident - guest - worker")}
-              {kpi("Needs review", reviewEvents.length, "Waiting at the gate", reviewEvents.length > 0)}
-              {kpi("Denied", counters.denied, "Blocked vehicles")}
-            </section>
+            <motion.section className="tab-kpis" initial="hidden" animate="visible" variants={sectionVariants}>
+              <motion.div className="kpi-card" variants={cardVariants}>
+                <div className="eyebrow">Cars today</div>
+                <div className="kpi-value">
+                  <AnimatedNumber className="animated-number" value={counters.total} />
+                </div>
+                <div className="kpi-meta">Entry + exit</div>
+              </motion.div>
+              <motion.div className="kpi-card" variants={cardVariants}>
+                <div className="eyebrow">Auto-allowed</div>
+                <div className="kpi-value">
+                  <AnimatedNumber className="animated-number" value={counters.allowed} />
+                </div>
+                <div className="kpi-meta">Resident - guest - worker</div>
+              </motion.div>
+              <motion.div className={`kpi-card ${reviewEvents.length > 0 ? "accent" : ""}`} variants={cardVariants}>
+                <div className="eyebrow">Needs review</div>
+                <div className="kpi-value">
+                  <AnimatedNumber className="animated-number" value={reviewEvents.length} />
+                </div>
+                <div className="kpi-meta">Waiting at the gate</div>
+              </motion.div>
+              <motion.div className="kpi-card" variants={cardVariants}>
+                <div className="eyebrow">Denied</div>
+                <div className="kpi-value">
+                  <AnimatedNumber className="animated-number" value={counters.denied} />
+                </div>
+                <div className="kpi-meta">Blocked vehicles</div>
+              </motion.div>
+            </motion.section>
 
             {loading ? <div className="card"><div className="card-body">Loading events...</div></div> : null}
             {error ? (
@@ -477,8 +506,16 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
               </div>
             ) : null}
 
+            <AnimatePresence initial={false}>
             {tab === "review" ? (
-              <section className="tab-split">
+              <motion.section
+                key="review-spotlight"
+                className="tab-split motion-tab-panel"
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={tabPanelVariants(reducedMotion)}
+              >
                 <div className="stack">
                   {latest ? (
                     <div className={`scan-spotlight ${latest.status}`}>
@@ -580,9 +617,19 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                     </div>
                     <div className="card-body">
                       {recentCardEvents.length ? (
-                        <div className="event-card-grid">
+                        <motion.div className="event-card-grid" layout transition={motionTransitions.layout}>
+                          <AnimatePresence initial={false}>
                           {recentCardEvents.map((event) => (
-                            <div className={`event-card ${event.status}`} key={`tablet-recent-${event.eventKey}`}>
+                            <motion.div
+                              className={`event-card ${event.status}`}
+                              key={`tablet-recent-${event.eventKey}`}
+                              layout
+                              variants={queueItemMotion}
+                              initial="initial"
+                              animate="animate"
+                              exit="exit"
+                              transition={motionTransitions.layout}
+                            >
                               <div className="row-between">
                                 <div className="row" style={{ gap: 12, alignItems: "flex-start" }}>
                                   {avatarFor(event)}
@@ -643,9 +690,10 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                                   />
                                 </div>
                               ) : null}
-                            </div>
+                            </motion.div>
                           ))}
-                        </div>
+                          </AnimatePresence>
+                        </motion.div>
                       ) : (
                         <div className="empty">
                           <Icon name="car" size={26} />
@@ -666,9 +714,19 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                   </div>
                   <div className="card-body tight">
                     {antennaEvents.length ? (
-                      <div className="stack">
+                      <motion.div className="stack" layout transition={motionTransitions.layout}>
+                        <AnimatePresence initial={false}>
                         {antennaEvents.slice(0, 4).map((event) => (
-                          <div className="queue-card" key={event.eventKey}>
+                          <motion.div
+                            className="queue-card"
+                            key={event.eventKey}
+                            layout
+                            variants={queueItemMotion}
+                            initial="initial"
+                            animate="animate"
+                            exit="exit"
+                            transition={motionTransitions.layout}
+                          >
                             <div className="row-between">
                               <div className="row" style={{ gap: 10, alignItems: "flex-start" }}>
                                 {avatarFor(event)}
@@ -726,12 +784,13 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                                   submitLabel="Register vehicle"
                                   onCancel={() => setRegisteringEventKey(null)}
                                   onSuccess={(message) => handleRegistrationSuccess(message)}
-                                />
-                              </div>
-                            ) : null}
-                          </div>
+                                  />
+                                </div>
+                              ) : null}
+                          </motion.div>
                         ))}
-                      </div>
+                        </AnimatePresence>
+                      </motion.div>
                     ) : (
                       <div className="empty">
                         <Icon name="shieldCheck" size={26} />
@@ -741,11 +800,20 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                     )}
                   </div>
                 </div>
-              </section>
+              </motion.section>
             ) : null}
+            </AnimatePresence>
 
+            <AnimatePresence mode="wait" initial={false}>
             {tab === "review" ? (
-              <section className="tab-split">
+              <motion.section
+                key="review-detail"
+                className="tab-split motion-tab-panel"
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={tabPanelVariants(reducedMotion)}
+              >
                 <div className="card">
                   <div className="card-header">
                     <div>
@@ -755,10 +823,10 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                     <span className={`badge ${openedEvents.length ? "success" : "outline"}`}>{openedEvents.length}</span>
                   </div>
                   <div className="card-body scroll" style={{ padding: 0, maxHeight: 340 }}>
-                    <div className="list">
-                      {openedEvents.length ? (
-                        openedEvents.map((event) => (
-                          <div className="list-row" key={`tablet-opened-${event.eventKey}`}>
+                      <div className="list">
+                        {openedEvents.length ? (
+                          openedEvents.map((event) => (
+                          <motion.div className="list-row" key={`tablet-opened-${event.eventKey}`} layout="position" variants={queueItemMotion} initial="initial" animate="animate" exit="exit">
                             <div className="left row" style={{ gap: 12, alignItems: "flex-start" }}>
                               {avatarFor(event)}
                               <div className="min-w-0">
@@ -776,7 +844,7 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                               <div className="mono">{formatTime(event.resolvedAt ?? event.ts)}</div>
                               <div className="muted mt-2">{relative(event.resolvedAt ?? event.ts)}</div>
                             </div>
-                          </div>
+                          </motion.div>
                         ))
                       ) : (
                         <div className="empty" style={{ padding: 24 }}>
@@ -798,10 +866,10 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                     <span className={`badge ${deniedEvents.length ? "danger" : "outline"}`}>{deniedEvents.length}</span>
                   </div>
                   <div className="card-body scroll" style={{ padding: 0, maxHeight: 340 }}>
-                    <div className="list">
-                      {deniedEvents.length ? (
-                        deniedEvents.map((event) => (
-                          <div className="list-row" key={`tablet-denied-${event.eventKey}`}>
+                      <div className="list">
+                        {deniedEvents.length ? (
+                          deniedEvents.map((event) => (
+                          <motion.div className="list-row" key={`tablet-denied-${event.eventKey}`} layout="position" variants={queueItemMotion} initial="initial" animate="animate" exit="exit">
                             <div className="left row" style={{ gap: 12, alignItems: "flex-start" }}>
                               {avatarFor(event)}
                               <div className="min-w-0">
@@ -819,7 +887,7 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                               <div className="mono">{formatTime(event.resolvedAt ?? event.ts)}</div>
                               <div className="muted mt-2">{relative(event.resolvedAt ?? event.ts)}</div>
                             </div>
-                          </div>
+                          </motion.div>
                         ))
                       ) : (
                         <div className="empty" style={{ padding: 24 }}>
@@ -831,11 +899,19 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                     </div>
                   </div>
                 </div>
-              </section>
+              </motion.section>
             ) : null}
 
             {tab === "history" ? (
-              <section className="stack" style={{ gap: 14 }}>
+              <motion.section
+                key="history"
+                className="stack motion-tab-panel"
+                style={{ gap: 14 }}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={tabPanelVariants(reducedMotion)}
+              >
                 <section className="card">
                   <div className="card-header">
                     <div>
@@ -848,7 +924,7 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                     <div className="list">
                       {events.length ? (
                         events.map((event) => (
-                          <div className="list-row" key={event.eventKey}>
+                          <motion.div className="list-row" key={event.eventKey} layout="position" variants={queueItemMotion} initial="initial" animate="animate" exit="exit">
                             <div className="left row" style={{ gap: 12, alignItems: "flex-start" }}>
                               {avatarFor(event)}
                               <div className="min-w-0">
@@ -869,7 +945,7 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                               <div className="mono">{formatTime(event.ts)}</div>
                               <div className="muted mt-2">{relative(event.ts)}</div>
                             </div>
-                          </div>
+                          </motion.div>
                         ))
                       ) : (
                         <div className="empty" style={{ padding: 24 }}>
@@ -895,7 +971,7 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                       <div className="list">
                         {openedEvents.length ? (
                           openedEvents.map((event) => (
-                            <div className="list-row" key={`history-opened-${event.eventKey}`}>
+                            <motion.div className="list-row" key={`history-opened-${event.eventKey}`} layout="position" variants={queueItemMotion} initial="initial" animate="animate" exit="exit">
                               <div className="left row" style={{ gap: 12, alignItems: "flex-start" }}>
                                 {avatarFor(event)}
                                 <div className="min-w-0">
@@ -912,7 +988,7 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                                 <div className="mono">{formatTime(event.resolvedAt ?? event.ts)}</div>
                                 <div className="muted mt-2">{relative(event.resolvedAt ?? event.ts)}</div>
                               </div>
-                            </div>
+                            </motion.div>
                           ))
                         ) : (
                           <div className="empty" style={{ padding: 24 }}>
@@ -937,7 +1013,7 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                       <div className="list">
                         {deniedEvents.length ? (
                           deniedEvents.map((event) => (
-                            <div className="list-row" key={`history-denied-${event.eventKey}`}>
+                            <motion.div className="list-row" key={`history-denied-${event.eventKey}`} layout="position" variants={queueItemMotion} initial="initial" animate="animate" exit="exit">
                               <div className="left row" style={{ gap: 12, alignItems: "flex-start" }}>
                                 {avatarFor(event)}
                                 <div className="min-w-0">
@@ -954,7 +1030,7 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                                 <div className="mono">{formatTime(event.resolvedAt ?? event.ts)}</div>
                                 <div className="muted mt-2">{relative(event.resolvedAt ?? event.ts)}</div>
                               </div>
-                            </div>
+                            </motion.div>
                           ))
                         ) : (
                           <div className="empty" style={{ padding: 24 }}>
@@ -967,11 +1043,19 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                     </div>
                   </div>
                 </section>
-              </section>
+              </motion.section>
             ) : null}
 
             {tab === "directory" ? (
-              <section className="stack" style={{ gap: 14 }}>
+              <motion.section
+                key="directory"
+                className="stack motion-tab-panel"
+                style={{ gap: 14 }}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={tabPanelVariants(reducedMotion)}
+              >
                 <section className="card">
                   <div className="card-header">
                     <div>
@@ -984,7 +1068,7 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                     <div className="list">
                       {directoryEvents.length ? (
                         directoryEvents.map((event) => (
-                          <div className="list-row" key={`directory-${event.epc}`}>
+                          <motion.div className="list-row" key={`directory-${event.epc}`} layout="position" variants={queueItemMotion} initial="initial" animate="animate" exit="exit">
                             <div className="left row" style={{ gap: 12, alignItems: "flex-start" }}>
                               <div className={`avatar ${avatarClassForKind(event.kind)}`}>{initials(event.subjectName)}</div>
                               <div className="min-w-0">
@@ -1017,7 +1101,7 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                                 <Icon name="refresh" size={12} /> Fetch latest
                               </button>
                             </div>
-                          </div>
+                          </motion.div>
                         ))
                       ) : (
                         <div className="empty" style={{ padding: 24 }}>
@@ -1043,7 +1127,7 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                       <div className="list">
                         {directoryGroups.review.length ? (
                           directoryGroups.review.map((event) => (
-                            <div className="list-row" key={`directory-review-${event.epc}`}>
+                            <motion.div className="list-row" key={`directory-review-${event.epc}`} layout="position" variants={queueItemMotion} initial="initial" animate="animate" exit="exit">
                               <div className="left row" style={{ gap: 12, alignItems: "flex-start" }}>
                                 {avatarFor(event)}
                                 <div className="min-w-0">
@@ -1059,7 +1143,7 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                                 <div>{event.plate || "-"}</div>
                                 <div className="muted mt-2">{event.location || "Gate queue"}</div>
                               </div>
-                            </div>
+                            </motion.div>
                           ))
                         ) : (
                           <div className="empty" style={{ padding: 24 }}>
@@ -1084,7 +1168,7 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                       <div className="list">
                         {directoryGroups.denied.length ? (
                           directoryGroups.denied.map((event) => (
-                            <div className="list-row" key={`directory-denied-${event.epc}`}>
+                            <motion.div className="list-row" key={`directory-denied-${event.epc}`} layout="position" variants={queueItemMotion} initial="initial" animate="animate" exit="exit">
                               <div className="left row" style={{ gap: 12, alignItems: "flex-start" }}>
                                 {avatarFor(event)}
                                 <div className="min-w-0">
@@ -1100,7 +1184,7 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                                 <div>{event.plate || "-"}</div>
                                 <div className="muted mt-2">{event.location || "Approach lane"}</div>
                               </div>
-                            </div>
+                            </motion.div>
                           ))
                         ) : (
                           <div className="empty" style={{ padding: 24 }}>
@@ -1113,11 +1197,18 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                     </div>
                   </div>
                 </section>
-              </section>
+              </motion.section>
             ) : null}
 
             {tab === "register" ? (
-              <section className="tab-split">
+              <motion.section
+                key="register"
+                className="tab-split motion-tab-panel"
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={tabPanelVariants(reducedMotion)}
+              >
                 <div className="card card-accent">
                   <div className="card-header">
                     <div>
@@ -1307,10 +1398,11 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                     </div>
                   </div>
                 </div>
-              </section>
+              </motion.section>
             ) : null}
+            </AnimatePresence>
 
-            <section className="tab-split">
+            <motion.section className="tab-split" initial="hidden" animate="visible" variants={sectionVariants}>
               <div className="card card-accent">
                 <div className="card-header">
                   <div>
@@ -1355,7 +1447,7 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
               </div>
 
               {latest ? (
-                <div className="sonar-card">
+                <motion.div className="sonar-card" variants={cardVariants}>
                   <div className="s-head">
                     <div>
                       <div className="eyebrow">Find car</div>
@@ -1392,9 +1484,9 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                       </div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               ) : (
-                <div className="sonar-card">
+                <motion.div className="sonar-card" variants={cardVariants}>
                   <div className="s-head">
                     <div>
                       <div className="eyebrow">Find car</div>
@@ -1410,11 +1502,11 @@ export function TabletGuard({ initialData }: { initialData: EventsResponse }) {
                   <div className="s-foot muted small" style={{ color: "rgba(255,255,255,0.64)" }}>
                     Scan a tag to locate it inside the estate.
                   </div>
-                </div>
+                </motion.div>
               )}
-            </section>
+            </motion.section>
           </main>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

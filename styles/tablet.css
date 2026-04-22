@@ -94,9 +94,10 @@
   align-items: center;
   gap: 12px;
   padding: 14px;
-  background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 10px;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.14);
+  backdrop-filter: blur(16px);
 }
 .tab-guard strong { display: block; font-size: 13px; }
 .tab-guard span { display: block; font-size: 11px; color: var(--text-inverse-muted); margin-top: 2px; }
@@ -146,6 +147,7 @@
   padding-top: 14px;
   display: grid;
   gap: 10px;
+  border-radius: 12px;
 }
 
 .tab-side-foot .stat-row {
@@ -182,6 +184,9 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(232, 90, 30, 0.06), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
 }
 
 .tab-head {
@@ -191,6 +196,13 @@
   gap: 20px;
   padding-bottom: 14px;
   border-bottom: 1px solid var(--border-default);
+  padding: 18px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.72)),
+    var(--brand-gradient-soft);
+  box-shadow: var(--shadow-2);
+  backdrop-filter: blur(16px);
 }
 
 .tab-head h1 {
@@ -222,6 +234,7 @@
   background: var(--surface);
   overflow: hidden;
   min-height: 240px;
+  box-shadow: var(--shadow-2);
 }
 
 .scan-spotlight::before {
@@ -365,9 +378,16 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  box-shadow: var(--shadow-1);
+  transition: box-shadow 160ms ease, transform 160ms ease;
 }
 
 .queue-card strong { font-size: 14px; }
+
+.queue-card:hover {
+  box-shadow: var(--shadow-2);
+  transform: translateY(-2px);
+}
 
 /* Scan input card */
 .scan-input {

@@ -104,10 +104,13 @@
 /* ─────────── Card / Panel ─────────── */
 .card {
   position: relative;
-  background: var(--surface);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.9)),
+    var(--brand-gradient-soft);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-card);
   overflow: hidden;
+  box-shadow: var(--shadow-1);
 }
 
 .card-dark {
@@ -118,6 +121,9 @@
 
 .card-accent {
   border-top: 2px solid var(--brand-primary);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.92)),
+    var(--brand-gradient-soft);
 }
 
 .card-header {
@@ -165,11 +171,14 @@
 
 .kpi-card {
   padding: 18px;
-  background: var(--surface);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.88)),
+    var(--brand-gradient-soft);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-card);
   position: relative;
   overflow: hidden;
+  box-shadow: var(--shadow-1);
 }
 
 .kpi-card::after {
@@ -186,6 +195,11 @@
 
 .kpi-card .kpi-value {
   margin-top: 10px;
+}
+
+.animated-number {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
 }
 
 .kpi-meta {
@@ -323,6 +337,27 @@
   color: var(--text-secondary);
 }
 
+.live-status-badge {
+  transform-origin: center;
+  border: 1px solid transparent;
+  backdrop-filter: blur(12px);
+}
+
+.live-status-badge.success {
+  background: linear-gradient(135deg, rgba(47, 158, 106, 0.16), rgba(47, 158, 106, 0.08));
+  border-color: var(--success-line);
+}
+
+.live-status-badge.warn {
+  background: linear-gradient(135deg, rgba(200, 145, 37, 0.18), rgba(200, 145, 37, 0.08));
+  border-color: var(--warn-line);
+}
+
+.live-status-badge.danger {
+  background: linear-gradient(135deg, rgba(214, 77, 65, 0.16), rgba(214, 77, 65, 0.08));
+  border-color: var(--danger-line);
+}
+
 .dot {
   display: inline-block;
   width: 7px;
@@ -365,6 +400,12 @@
 
 .list-row:hover {
   background: var(--surface-alt);
+}
+
+.motion-tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
 .list-row.compact {
