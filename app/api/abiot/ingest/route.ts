@@ -41,7 +41,7 @@ async function createEventFromParams(params: URLSearchParams) {
   const reason = pick(params, ["reason"]) || null;
 
   const scannerReportedUnknown = isUnknownLabel(rawSubjectName);
-  const existingRegistration = findRegistrationByEpc(epc);
+  const existingRegistration = await findRegistrationByEpc(epc);
   const shouldUpsertRegistration = !scannerReportedUnknown && !existingRegistration;
 
   if (shouldUpsertRegistration) {

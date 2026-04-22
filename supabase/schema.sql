@@ -58,3 +58,21 @@ create table if not exists event_resolutions (
 
 create index if not exists event_resolutions_event_key_idx on event_resolutions (event_key, resolved_at desc);
 
+create table if not exists vehicle_registrations (
+  epc text primary key,
+  tid text,
+  label text not null,
+  status text,
+  kind text,
+  subject_meta text,
+  plate text,
+  reason text,
+  reader_id text not null default 'CW-C72-01',
+  mode text not null default 'handheld',
+  gate_id text not null default 'gate-main-entry',
+  direction text not null default 'entry',
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists vehicle_registrations_updated_idx on vehicle_registrations (updated_at desc);
+

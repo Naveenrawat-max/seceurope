@@ -271,7 +271,7 @@ export async function convertRawRowToAccessEventWithLookup(row: RawScanRow, map:
   if (abiotDetails) {
     defaults = abiotDetails;
   } else {
-    const registration = findRegistrationByEpc(baseEvent.epc);
+    const registration = await findRegistrationByEpc(baseEvent.epc);
     if (registration) {
       defaults = {
         kind: registration.kind || "registered",

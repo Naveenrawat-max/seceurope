@@ -70,6 +70,7 @@ export const appConfig = {
   rawScanTable: env("RAW_SCAN_TABLE", "raw_scans"),
   accessEventsTable: env("ACCESS_EVENTS_TABLE", "access_events"),
   eventResolutionsTable: env("EVENT_RESOLUTIONS_TABLE", "event_resolutions"),
+  vehicleRegistrationsTable: env("VEHICLE_REGISTRATIONS_TABLE", "vehicle_registrations"),
   convertBatchSize: envNumber("CONVERT_BATCH_SIZE", 400),
   fetchLimit: envNumber("EVENT_FETCH_LIMIT", 250),
   internalConvertToken: process.env.CONVERT_INTERNAL_TOKEN?.trim() || "",

@@ -53,7 +53,7 @@ async function resolveRegistrationContext(input: ReturnType<typeof normalizePayl
   direction: "entry" | "exit";
 }> {
   const sourceEvent = input.eventKey ? await findEventByKey(input.eventKey) : await findLatestEventByEpc(input.epc);
-  const existingRegistration = findRegistrationByEpc(input.epc);
+  const existingRegistration = await findRegistrationByEpc(input.epc);
   const lookup = await lookupAbiotDirectoryDetails(input.epc);
 
   const tid =

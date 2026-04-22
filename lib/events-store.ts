@@ -169,12 +169,97 @@ function registrationKey(epc: string) {
   return `registry_${epc.trim().toUpperCase()}`;
 }
 
+function registrationRowFromSupabase(row: Record<string, unknown>): RegistrationRow {
+  return {
+    epc: String(row.epc ?? "").trim().toUpperCase(),
+    tid: row.tid ? String(row.tid) : null,
+    label: String(row.label ?? ""),
+    status: row.status ? String(row.status) : null,
+    kind: row.kind ? String(row.kind) : null,
+    subject_meta: row.subject_meta ? String(row.subject_meta) : null,
+    plate: row.plate ? String(row.plate) : null,
+    reason: row.reason ? String(row.reason) : null,
+    reader_id: row.reader_id ? String(row.reader_id) : "CW-C72-01",
+    mode: row.mode === "antenna" ? "antenna" : "handheld",
+    gate_id: row.gate_id ? String(row.gate_id) : "gate-main-entry",
+    direction: row.direction === "exit" ? "exit" : "entry",
+    updated_at: row.updated_at ? String(row.updated_at) : new Date().toISOString(),
+  };
+}
+
+async function upsertRegistrationInSupabase(registration: RegistrationRow) {
+  const client = getSupabaseServerClient();
+  if (!client) {
+    return;
+  }
+  const result = await client
+    .from(appConfig.vehicleRegistrationsTable)
+    .upsert(
+      [
+        {
+          epc: registration.epc,
+          tid: registration.tid,
+          label: registration.label,
+          status: registration.status,
+          kind: registration.kind,
+          subject_meta: registration.subject_meta,
+          plate: registration.plate,
+          reason: registration.reason,
+          reader_id: registration.reader_id,
+          mode: registration.mode,
+          gate_id: registration.gate_id,
+          direction: registration.direction,
+          updated_at: registration.updated_at,
+        },
+      ],
+      { onConflict: "epc" },
+    );
+  if (result.error) {
+    throw result.error;
+  }
+}
+
+async function fetchRegistrationFromSupabase(epc: string): Promise<RegistrationRow | null> {
+  const client = getSupabaseServerClient();
+  if (!client) {
+    return null;
+  }
+  const result = await client
+    .from(appConfig.vehicleRegistrationsTable)
+    .select("*")
+    .eq("epc", epc)
+    .limit(1)
+    .maybeSingle();
+  if (result.error) {
+    return null;
+  }
+  return result.data ? registrationRowFromSupabase(result.data as Record<string, unknown>) : null;
+}
+
+async function fetchAllRegistrationsFromSupabase(): Promise<RegistrationRow[]> {
+  const client = getSupabaseServerClient();
+  if (!client) {
+    return [];
+  }
+  const result = await client
+    .from(appConfig.vehicleRegistrationsTable)
+    .select("*")
+    .order("updated_at", { ascending: false });
+  if (result.error || !Array.isArray(result.data)) {
+    return [];
+  }
+  return result.data.map((row) => registrationRowFromSupabase(row as Record<string, unknown>));
+}
+
 /**
  * Look up a previously registered vehicle by EPC.
  * Called by the converter as a fallback when the ABIOT API returns no match,
  * and by the lookup proxy so the scanner can discover web-only registrations.
+ *
+ * Reads Supabase first so registrations survive Render restarts (ephemeral FS).
+ * Populates the in-memory cache on a Supabase hit.
  */
-export function findRegistrationByEpc(epc: string): {
+export async function findRegistrationByEpc(epc: string): Promise<{
   label: string;
   status: string | null;
   kind: string | null;
@@ -182,13 +267,33 @@ export function findRegistrationByEpc(epc: string): {
   plate: string | null;
   tid: string | null;
   reason: string | null;
-} | null {
-  const store = getMemoryStore();
+} | null> {
   const normalized = epc.trim().toUpperCase();
-  const registration = store.registrations.find((r) => r.epc === normalized);
+  if (!normalized) {
+    return null;
+  }
+
+  const store = getMemoryStore();
+  let registration = store.registrations.find((r) => r.epc === normalized);
+
+  if (!registration) {
+    const fromSupabase = await fetchRegistrationFromSupabase(normalized);
+    if (fromSupabase) {
+      const existingIndex = store.registrations.findIndex((r) => r.epc === normalized);
+      if (existingIndex >= 0) {
+        store.registrations[existingIndex] = fromSupabase;
+      } else {
+        store.registrations.unshift(fromSupabase);
+      }
+      saveMemoryStoreToDisk(store);
+      registration = fromSupabase;
+    }
+  }
+
   if (!registration) {
     return null;
   }
+
   return {
     label: registration.label,
     status: registration.status,
@@ -513,6 +618,12 @@ export async function upsertVehicleRegistration(input: {
   const event = input.materializeEvent === false ? null : await materializeRegistrationEvent(store, registration);
   saveMemoryStoreToDisk(store);
 
+  try {
+    await upsertRegistrationInSupabase(registration);
+  } catch (registrationError) {
+    console.error("Failed to persist vehicle registration to Supabase", registrationError);
+  }
+
   if (event) {
     await upsertAccessEventsInSupabase([event]);
     broadcastLiveMessage({
@@ -532,6 +643,22 @@ export async function upsertVehicleRegistration(input: {
 
 export async function syncLatestRegistrations(surface: "manager" | "tablet" = "manager", gateId?: string) {
   const store = await getReadyMemoryStore();
+
+  const fromSupabase = await fetchAllRegistrationsFromSupabase();
+  if (fromSupabase.length > 0) {
+    const byEpc = new Map<string, RegistrationRow>();
+    for (const row of store.registrations) {
+      byEpc.set(row.epc, row);
+    }
+    for (const row of fromSupabase) {
+      const existing = byEpc.get(row.epc);
+      if (!existing || new Date(row.updated_at).getTime() > new Date(existing.updated_at).getTime()) {
+        byEpc.set(row.epc, row);
+      }
+    }
+    store.registrations = Array.from(byEpc.values());
+  }
+
   const registrations = [...store.registrations].sort(
     (left, right) => new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime(),
   );

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { abiotConfig } from "@/lib/config";
 import { findRegistrationByEpc } from "@/lib/events-store";
 
-type Registration = NonNullable<ReturnType<typeof findRegistrationByEpc>>;
+type Registration = NonNullable<Awaited<ReturnType<typeof findRegistrationByEpc>>>;
 
 function registrationState(status: string | null): string {
   if (status === "allowed" || status === "denied" || status === "review") {
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: false, found: false, error: "uhf_epc_hex is required" }, { status: 400 });
   }
 
-  const localRegistration = findRegistrationByEpc(epc);
+  const localRegistration = await findRegistrationByEpc(epc);
   if (localRegistration) {
     return NextResponse.json(synthesizeLookupFromRegistration(epc, localRegistration));
   }
