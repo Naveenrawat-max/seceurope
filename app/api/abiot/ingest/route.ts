@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { insertManualRawScan, upsertVehicleRegistration } from "@/lib/events-store";
+import { findRegistrationByEpc, insertManualRawScan, upsertVehicleRegistration } from "@/lib/events-store";
 
 function pick(params: URLSearchParams, keys: string[]) {
   for (const key of keys) {
@@ -9,6 +9,17 @@ function pick(params: URLSearchParams, keys: string[]) {
     }
   }
   return "";
+}
+
+function isUnknownLabel(value: string | null): boolean {
+  if (!value) return true;
+  const normalized = value.trim().toLowerCase();
+  return (
+    normalized === "" ||
+    normalized === "unknown" ||
+    normalized === "unknown vehicle" ||
+    normalized === "unknown_vehicle"
+  );
 }
 
 async function createEventFromParams(params: URLSearchParams) {
@@ -25,15 +36,19 @@ async function createEventFromParams(params: URLSearchParams) {
   const plate = pick(params, ["plate", "plate_number", "license_plate"]) || null;
   const status = pick(params, ["status"]) || null;
   const kind = pick(params, ["kind"]) || null;
-  const subjectName = pick(params, ["subject_name", "subjectName", "label"]) || null;
+  const rawSubjectName = pick(params, ["subject_name", "subjectName", "label"]) || null;
   const subjectMeta = pick(params, ["subject_meta", "subjectMeta", "details"]) || null;
   const reason = pick(params, ["reason"]) || null;
 
-  if (subjectName) {
+  const scannerReportedUnknown = isUnknownLabel(rawSubjectName);
+  const existingRegistration = findRegistrationByEpc(epc);
+  const shouldUpsertRegistration = !scannerReportedUnknown && !existingRegistration;
+
+  if (shouldUpsertRegistration) {
     const registration = await upsertVehicleRegistration({
       epc,
       tid,
-      label: subjectName,
+      label: rawSubjectName as string,
       status,
       kind,
       subjectMeta,
@@ -55,22 +70,23 @@ async function createEventFromParams(params: URLSearchParams) {
 
   const event = await insertManualRawScan({
     epc,
-    tid,
+    tid: tid || existingRegistration?.tid || null,
     readerId,
     mode,
     gateId,
     direction,
-    plate,
+    plate: plate || existingRegistration?.plate || null,
     status,
     kind,
-    subjectName,
-    subjectMeta,
-    reason,
+    subjectName: scannerReportedUnknown ? null : rawSubjectName,
+    subjectMeta: scannerReportedUnknown ? null : subjectMeta,
+    reason: scannerReportedUnknown ? null : reason,
   });
 
   return NextResponse.json({
     ok: true,
     event,
+    preservedRegistration: Boolean(existingRegistration),
   });
 }
 
