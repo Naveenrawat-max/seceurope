@@ -3,14 +3,17 @@
 .tab-body {
   min-height: 100vh;
   background:
-    radial-gradient(ellipse at 20% 0%, rgba(232, 90, 30, 0.14), transparent 55%),
-    radial-gradient(ellipse at 80% 100%, rgba(43, 122, 158, 0.12), transparent 55%),
-    linear-gradient(135deg, #05110E 0%, #0C1A17 55%, #080F0D 100%);
+    radial-gradient(ellipse at 18% 0%, rgba(124, 92, 255, 0.20), transparent 55%),
+    radial-gradient(ellipse at 82% 100%, rgba(34, 227, 255, 0.20), transparent 55%),
+    radial-gradient(ellipse at 50% 50%, rgba(0, 224, 164, 0.06), transparent 60%),
+    linear-gradient(135deg, #06070C 0%, #0A0B12 55%, #04050A 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 28px;
   color: var(--text-inverse);
+  position: relative;
+  overflow: hidden;
 }
 
 .tab-frame {
@@ -18,8 +21,8 @@
   max-width: 1220px;
   border-radius: 28px;
   padding: 14px;
-  background: linear-gradient(180deg, #1A1A1A, #0A0A0A);
-  box-shadow: var(--shadow-4), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  background: linear-gradient(180deg, #181820, #06070C);
+  box-shadow: var(--shadow-4), 0 0 0 1px rgba(255, 255, 255, 0.06), 0 0 80px rgba(124, 92, 255, 0.18);
   position: relative;
 }
 
@@ -51,7 +54,10 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
-  background: linear-gradient(180deg, #0E1A17, #0A1412);
+  background:
+    radial-gradient(circle at 10% 0%, rgba(124, 92, 255, 0.14), transparent 40%),
+    radial-gradient(circle at 100% 100%, rgba(34, 227, 255, 0.16), transparent 50%),
+    linear-gradient(180deg, #0A0B12 0%, #06070C 100%);
   color: var(--text-inverse);
   padding: 22px 18px;
   border-right: 1px solid var(--border-dark);
@@ -68,15 +74,17 @@
 .tab-brand .mark {
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, rgba(232, 90, 30, 0.95), rgba(255, 182, 115, 0.7));
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--brand-gradient);
   color: white;
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-style: italic;
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  box-shadow: 0 10px 28px rgba(124, 92, 255, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.32);
 }
 
 .tab-brand strong { display: block; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
@@ -125,9 +133,10 @@
 
 .tab-nav button:hover { background: rgba(255, 255, 255, 0.04); color: white; }
 .tab-nav button.active {
-  background: rgba(232, 90, 30, 0.14);
-  border-color: rgba(232, 90, 30, 0.32);
+  background: linear-gradient(135deg, rgba(124, 92, 255, 0.22), rgba(34, 227, 255, 0.12));
+  border-color: rgba(124, 92, 255, 0.38);
   color: white;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .tab-nav .counter {
@@ -185,7 +194,7 @@
   flex-direction: column;
   gap: 18px;
   background:
-    radial-gradient(circle at 100% 0%, rgba(232, 90, 30, 0.06), transparent 24%),
+    radial-gradient(circle at 100% 0%, rgba(124, 92, 255, 0.06), transparent 24%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
 }
 
@@ -207,10 +216,10 @@
 
 .tab-head h1 {
   margin: 0;
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-style: italic;
-  font-size: 30px;
-  letter-spacing: -0.02em;
+  font-size: 36px;
+  letter-spacing: -0.035em;
   font-weight: 400;
   line-height: 1;
 }
@@ -255,11 +264,11 @@
 .scan-spotlight.denied::before { background: var(--danger); }
 
 .scan-spotlight .subject {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-style: italic;
-  font-size: 38px;
-  letter-spacing: -0.02em;
-  line-height: 1.05;
+  font-size: 44px;
+  letter-spacing: -0.04em;
+  line-height: 1;
   margin: 8px 0 6px;
 }
 
@@ -287,10 +296,13 @@
   position: relative;
   height: 100%;
   min-height: 300px;
-  border-radius: 14px;
+  border-radius: 18px;
   overflow: hidden;
-  border: 1px solid var(--border-default);
-  background: radial-gradient(circle at 50% 55%, #1A2C27 0%, #0C1916 72%);
+  border: 1px solid var(--border-dark-strong);
+  background:
+    radial-gradient(circle at 50% 55%, rgba(34, 227, 255, 0.16) 0%, transparent 60%),
+    radial-gradient(circle at 80% 20%, rgba(124, 92, 255, 0.12) 0%, transparent 50%),
+    radial-gradient(circle at 50% 55%, #161826 0%, #06070C 72%);
   color: white;
   display: flex;
   flex-direction: column;
@@ -324,16 +336,16 @@
 
 .sonar-core {
   position: relative;
-  width: 170px;
-  min-height: 170px;
+  width: 180px;
+  min-height: 180px;
   padding: 16px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #E85A1E, #C9430E);
+  background: var(--brand-gradient);
   display: grid;
   place-items: center;
   color: white;
   text-align: center;
-  box-shadow: 0 0 40px rgba(232, 90, 30, 0.45);
+  box-shadow: 0 0 60px rgba(124, 92, 255, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.32);
   z-index: 2;
 }
 

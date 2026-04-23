@@ -181,6 +181,53 @@ export function countTransition(reducedMotion: boolean): Transition {
   };
 }
 
+export function kineticLetterVariants(reducedMotion: boolean): Variants {
+  if (reducedMotion) {
+    return {
+      hidden: { opacity: 0 },
+      visible: { opacity: 1, transition: { duration: motionDurations.short } },
+    };
+  }
+
+  return {
+    hidden: {
+      opacity: 0,
+      y: "120%",
+      rotateX: -45,
+      filter: "blur(12px)",
+    },
+    visible: {
+      opacity: 1,
+      y: "0%",
+      rotateX: 0,
+      filter: "blur(0px)",
+      transition: {
+        duration: 0.9,
+        ease: premiumEase,
+      },
+    },
+  };
+}
+
+export function magneticTileVariants(reducedMotion: boolean): Variants {
+  if (reducedMotion) {
+    return {
+      hidden: { opacity: 0 },
+      visible: { opacity: 1, transition: { duration: motionDurations.short } },
+    };
+  }
+
+  return {
+    hidden: { opacity: 0, y: 28, filter: "blur(10px)" },
+    visible: {
+      opacity: 1,
+      y: 0,
+      filter: "blur(0px)",
+      transition: { duration: 0.8, ease: premiumEase },
+    },
+  };
+}
+
 export function liveBadgeAnimation(reducedMotion: boolean, isLive: boolean): TargetAndTransition {
   if (reducedMotion || !isLive) {
     return {
