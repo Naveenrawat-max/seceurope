@@ -1,124 +1,150 @@
 # Seceurope Web
 
-Seceurope Web is a Next.js access-control portal designed for gate operations. It provides a real-time manager dashboard, a tablet view for security guards, ABIOT scan ingest endpoints, and a Supabase-backed event pipeline for RFID vehicle checks.
+Seceurope Web is a Next.js access-control portal designed for physical gate operations. It provides a real-time manager dashboard, a tablet view for security guards, endpoints to ingest RFID scanner data, and a Supabase-backed event pipeline for vehicle checks.
 
-## Features
+---
 
-- `/manager`: A real-time control-room dashboard for monitoring access events.
-- `/tablet`: A simplified, guard-facing workflow for verifying vehicle entry and exits at the gate.
-- **ABIOT-compatible ingest endpoint:** Receives RFID scan data at `/api/abiot/ingest`.
-- **Supabase-backed event pipeline:** Handles event conversion, storage, and resolution tracking.
-- **Real-time Updates:** A custom Node server (`server.mjs`) pushes live updates over WebSockets (`/ws`) to the dashboards whenever a new scan is detected.
-- **Keep-Alive Scripts:** Internal background processes that prevent Render free tier web services and Supabase free tier instances from sleeping due to inactivity.
+## 🏗️ System Architecture
 
-## Stack
+The following diagram illustrates how RFID scans flow from the physical gate to the dashboards in real-time.
 
-- Next.js 16 (App Router)
-- React 19
-- TypeScript
-- Node custom server (`server.mjs`)
-- Supabase (`@supabase/supabase-js`)
-- WebSockets (`ws`)
-- Vitest
+```mermaid
+sequenceDiagram
+    participant Scanner as RFID Scanner
+    participant NextJS as Next.js API (/api/abiot/ingest)
+    participant Supabase as Supabase Database
+    participant WSServer as WebSocket Server
+    participant Manager as Manager Dashboard
+    participant Tablet as Tablet Guard View
 
-## Getting Started
+    Scanner->>NextJS: 1. Vehicle scanned (HTTP GET)
+    NextJS->>Supabase: 2. Convert & Store access_event
+    NextJS->>WSServer: 3. Trigger "events-changed"
+    WSServer-->>Manager: 4. Broadcast live update
+    WSServer-->>Tablet: 4. Broadcast live update
+    Manager->>NextJS: 5. Auto-fetch latest events
+    Tablet->>NextJS: 5. Auto-fetch latest events
+```
 
-### Prerequisites
+---
 
-- Node.js 20+
+## ✨ Features
+
+- **Manager Dashboard (`/manager`):** A real-time control-room interface for monitoring access events, viewing counters (entries vs. exits), and manually resolving security incidents.
+- **Tablet Guard View (`/tablet`):** A simplified, guard-facing interface meant for iPads or tablets at the gate to quickly verify if a vehicle is allowed or denied.
+- **ABIOT Integration:** Receives standard ABIOT RFID scan data at `/api/abiot/ingest`.
+- **Live Updates:** A custom Node.js server (`server.mjs`) pushes updates over WebSockets (`/ws`) to all connected dashboards whenever a new scan is detected.
+- **Always-On Scripts:** Built-in background processes prevent free-tier hosting services (Render and Supabase) from going to sleep due to inactivity.
+
+---
+
+## 🚀 Getting Started
+
+### 1. Prerequisites
+- [Node.js](https://nodejs.org/) (version 20 or higher)
 - npm
 
-### Installation
+### 2. Installation
+Install the project dependencies:
+```bash
+npm install
+```
 
-1. Install all dependencies:
-   ```text
-   npm i
-   ```
+### 3. Environment Configuration
+Copy the template to create your local environment file:
+```bash
+cp .env.example .env.local
+```
+*Note: See the [Environment Variables](#environment-variables) section below for required values.*
 
-2. Create a local environment file from the template:
-   ```text
-   cp .env.example .env.local
-   ```
+### 4. Running Locally
+Start the development server:
+```bash
+npx cross-env NODE_ENV=development node server.mjs
+```
 
-3. Start the development server:
-   ```text
-   npx cross-env NODE_ENV=development node server.mjs
-   ```
-
-### Production Build
-
-Build and run for production:
-
-```text
+### 5. Production Build
+Build and run the application for production:
+```bash
 npx next build
 npx cross-env NODE_ENV=production node server.mjs
 ```
 
-### Tests
+---
 
-Run Vitest unit tests:
+## 📖 How to Use the Portal
 
-```text
-npx vitest run
+1. **Manager Dashboard (`/manager`):** Open this page in your control room. It displays a live feed of all gate activity.
+2. **Tablet Guard View (`/tablet`):** Provide this view to physical gate guards. It strips away complex data and highlights simply: "Allow" or "Deny".
+3. **RFID Scanners:** Configure your RFID scanners (handhelds or antennas) to send HTTP GET requests to the `/api/abiot/ingest` endpoint whenever a vehicle is scanned.
+   - Example payload: `?uhf_epc_hex=...&uhf_tid=...&reader_id=...&mode=handheld&gate_id=...&direction=entry`
+4. **Real-time Sync:** As soon as an RFID scanner hits the ingest endpoint, both the Manager and Tablet views will instantly update without requiring a manual page refresh.
+
+---
+
+## 🗄️ Database Setup (Supabase)
+
+This project relies on Supabase for robust data storage. The reference schema is located in [`supabase/schema.sql`](./supabase/schema.sql).
+
+1. Create a new [Supabase](https://supabase.com/) project.
+2. Open the SQL Editor in your Supabase dashboard and run the script from `supabase/schema.sql`.
+3. Add your Supabase URL and keys to `.env.local`.
+
+*Demo Mode: If Supabase server credentials are missing, the app will fall back to an in-memory database for local testing purposes.*
+
+---
+
+## ⚡ Free Tier Keep-Alive System
+
+If you are hosting this project on free tiers (like Render or Supabase), they typically pause your services after a period of inactivity. This project includes built-in scripts in `server.mjs` to keep them awake.
+
+```mermaid
+graph TD
+    A[Node Server server.mjs] -->|Every 5 minutes| B(Pings PUBLIC_APP_URL)
+    B -->|Keeps awake| C[Render Web Service]
+
+    A -->|Every 4 days| D(SELECT query)
+    D -->|Keeps awake| E[Supabase Database]
 ```
 
-## How to use the Web Portal
+To enable this, ensure you have set `PUBLIC_APP_URL` in your environment variables.
 
-Once the app is running:
+---
 
-1. **Manager Dashboard (`/manager`):** Open this page in the control room. It displays a real-time list of all gate access events, counters for entry/exit, and allows managers to view or resolve security incidents manually.
-2. **Tablet Guard View (`/tablet`):** Provide this interface to guards stationed at physical gates. It displays simplified incoming scans meant to quickly verify whether a vehicle is allowed or denied entry.
-3. **RFID Scanners:** Your RFID scanners (e.g. handhelds or antennas) should be configured to hit the `/api/abiot/ingest` endpoint whenever they scan a vehicle. The payload parameters match the standard ABIOT format (e.g. `uhf_epc_hex`, `uhf_tid`, `reader_id`, `mode`, `gate_id`, `direction`).
-4. **Real-time Sync:** As soon as an RFID scanner hits the ingest endpoint, the Next.js server detects the new event, converts the raw scan to an `access_event`, and broadcasts a WebSocket message. Both the `/manager` and `/tablet` views will instantly update without requiring a page refresh.
-
-## Database & Supabase Integration
-
-This project relies on Supabase for data storage. The reference schema is in [`supabase/schema.sql`](./supabase/schema.sql).
-
-### Typical setup:
-
-1. Create a Supabase project.
-2. Run the SQL script from `supabase/schema.sql` in the Supabase SQL Editor.
-3. Add your Supabase credentials and URLs to `.env.local` (or your host environment).
-
-If Supabase server credentials are missing (`NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`), the app will fall back to an in-memory demo behavior for local development.
-
-## Free Tier Keep-Alive System
-
-This app includes built-in scripts inside `server.mjs` to keep your free-tier services active:
-- **Render Keep-Alive:** Pings the `PUBLIC_APP_URL` every 5 minutes to prevent the Render web service from sleeping after 15 minutes of inactivity.
-- **Supabase Keep-Alive:** Runs a lightweight `SELECT` query against your Supabase database every 4 days to prevent it from being paused by Supabase after 7 days of inactivity.
-
-Ensure you have `PUBLIC_APP_URL` set in your environment variables for the Render Keep-Alive to work properly.
-
-## Environment Variables
+## ⚙️ Environment Variables
 
 Review [`.env.example`](./.env.example) for all available variables.
 
-### Required for Supabase mode:
+**Required for Supabase Database:**
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
-### Required for Keep-Alive system:
-- `PUBLIC_APP_URL` (e.g. `https://my-app.onrender.com`)
+**Required for Keep-Alive System:**
+- `PUBLIC_APP_URL` (e.g. `https://my-seceurope-app.onrender.com`)
 
-### Optional integration settings:
-- `CONVERT_BATCH_SIZE`, `EVENT_FETCH_LIMIT`, `CONVERT_INTERNAL_TOKEN`
-- ABIOT integrations (`ABIOT_API_BASE_URL`, `ABIOT_LOOKUP_URL`, `ABIOT_UPDATE_URL`, etc.)
-- Table overrides (`RAW_SCAN_TABLE`, `ACCESS_EVENTS_TABLE`, etc.)
+**Optional Integrations:**
+- `CONVERT_BATCH_SIZE`, `EVENT_FETCH_LIMIT`
+- ABIOT endpoints (`ABIOT_API_BASE_URL`, `ABIOT_LOOKUP_URL`, etc.)
+- Custom table names (`RAW_SCAN_TABLE`, `ACCESS_EVENTS_TABLE`)
 
-## API Summary
+---
 
-- `GET /api/events?surface=manager|tablet&gateId=...`: Fetches recent access events.
-- `GET /api/abiot/ingest`: Main ingestion point for ABIOT RFID scanners.
-- `POST /api/events/{eventKey}/resolve`: Manually resolve an event.
-- `POST /api/convert/run`: Triggers the pending raw scan conversion manually.
-- `POST /api/abiot/register`: Register a new vehicle to ABIOT directly from the portal.
-- `POST /api/fetch-latest`: Forces a manual refresh of latest events.
+## 📡 API Summary
 
-## Deployment Notes
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/events` | `GET` | Fetches recent access events (supports `?surface=manager` or `tablet`). |
+| `/api/abiot/ingest` | `GET` | Main ingestion point for ABIOT RFID scanners. |
+| `/api/events/{id}/resolve`| `POST` | Manually resolve or update an event status. |
+| `/api/convert/run` | `POST` | Triggers the pending raw scan conversion manually. |
+| `/api/abiot/register` | `POST` | Register a new vehicle to ABIOT directly from the portal. |
+| `/api/fetch-latest` | `POST` | Forces a manual refresh of the latest events. |
 
-This project uses a custom Node server (`server.mjs`) to support WebSockets, which means it **cannot** be deployed as a standard serverless app (like a default Vercel deployment).
+---
 
-Deploy it to a host that supports a long-running Node process (e.g., Render, Railway, DigitalOcean App Platform, or a VPS).
+## ☁️ Deployment Notes
+
+Because this project uses a custom Node server (`server.mjs`) to support WebSockets, **it cannot be deployed as a standard serverless Next.js app** (e.g., standard Vercel deployments).
+
+You must deploy it to a host that supports long-running Node processes (e.g., **Render**, Railway, DigitalOcean App Platform, AWS EC2).
