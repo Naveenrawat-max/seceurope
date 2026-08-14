@@ -1,6 +1,13 @@
+import * as dotenv from "dotenv";
+import { resolve } from "node:path";
+
+dotenv.config({ path: resolve(process.cwd(), ".env.local") });
+dotenv.config({ path: resolve(process.cwd(), ".env") });
+
 import { createServer } from "node:http";
 
 import next from "next";
+import { createClient } from "@supabase/supabase-js";
 import { WebSocketServer } from "ws";
 import { broadcastLiveMessage, registerLiveSocket } from "./lib/live-updates.mjs";
 
@@ -89,6 +96,50 @@ function startWatcher(baseUrl) {
   }, 2500);
 }
 
+
+function startKeepAlives(baseUrl) {
+  const publicAppUrl = process.env.PUBLIC_APP_URL || baseUrl;
+
+
+  // Supabase keep-alive (every 4 days)
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || "";
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || "";
+
+  if (supabaseUrl && supabaseKey) {
+    console.log(`[Keep-Alive] Starting Supabase keep-alive query every 4 days.`);
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Run immediately once
+    supabase.from('raw_scans').select('id').limit(1).then(({ error }) => {
+       if(error) console.error("[Keep-Alive] Initial Supabase ping failed", error.message);
+       else console.log("[Keep-Alive] Initial Supabase ping ok");
+    });
+
+    // And then every 4 days
+    setInterval(() => {
+      supabase.from('raw_scans').select('id').limit(1).then(({ error }) => {
+        if(error) console.error("[Keep-Alive] Supabase ping failed", error.message);
+        else console.log("[Keep-Alive] Supabase ping ok");
+      });
+    }, 4 * 24 * 60 * 60 * 1000);
+  } else {
+    console.log(`[Keep-Alive] Supabase credentials not found, skipping Supabase keep-alive.`);
+  }
+
+  // Render keep-alive (every 5 minutes)
+  console.log(`[Keep-Alive] Starting Render web service keep-alive ping to ${publicAppUrl} every 5 minutes.`);
+  setInterval(() => {
+    fetch(`${publicAppUrl}/api/events?surface=manager`, {
+      method: "GET",
+      headers: { "user-agent": "render-keep-alive" },
+    }).then(res => {
+      console.log(`[Keep-Alive] Render ping ok: ${res.ok}`);
+    }).catch(err => {
+      console.error(`[Keep-Alive] Render ping failed: `, err.message);
+    });
+  }, 5 * 60 * 1000);
+}
+
 function startHeartbeat() {
   if (heartbeatTimer) {
     return;
@@ -147,6 +198,7 @@ app.prepare().then(() => {
   server.listen(port, host, () => {
     const baseUrl = `http://127.0.0.1:${port}`;
     startWatcher(baseUrl);
+    startKeepAlives(baseUrl);
     startHeartbeat();
     console.log(`Seceurope web listening on http://${host}:${port} (${dev ? "dev" : "prod"})`);
   });
