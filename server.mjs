@@ -97,8 +97,9 @@ function startWatcher(baseUrl) {
 }
 
 
-function startKeepAlives(baseUrl) {
-  const publicAppUrl = process.env.PUBLIC_APP_URL || baseUrl;
+function startKeepAlives() {
+  let publicAppUrl = process.env.PUBLIC_APP_URL || process.env.RENDER_EXTERNAL_URL || "https://seceurope.onrender.com";
+  if (publicAppUrl.endsWith("/")) publicAppUrl = publicAppUrl.slice(0, -1);
 
 
   // Supabase keep-alive (every 4 days)
@@ -198,7 +199,7 @@ app.prepare().then(() => {
   server.listen(port, host, () => {
     const baseUrl = `http://127.0.0.1:${port}`;
     startWatcher(baseUrl);
-    startKeepAlives(baseUrl);
+    startKeepAlives();
     startHeartbeat();
     console.log(`Seceurope web listening on http://${host}:${port} (${dev ? "dev" : "prod"})`);
   });
