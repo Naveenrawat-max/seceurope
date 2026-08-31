@@ -20,117 +20,45 @@ const app = next({ dev, hostname: host, port });
 const handle = app.getRequestHandler();
 const wss = new WebSocketServer({ noServer: true });
 
-let lastSignature = "";
-let watcherTimer = null;
 let heartbeatTimer = null;
-let watcherInFlight = false;
-
-function signatureForPayload(payload) {
-  const safeEvents = Array.isArray(payload?.events)
-    ? payload.events.slice(0, 60).map((event) => ({
-        eventKey: event?.eventKey ?? "",
-        ts: event?.ts ?? "",
-        status: event?.status ?? "",
-        outcome: event?.outcome ?? "",
-        resolvedAt: event?.resolvedAt ?? "",
-        resolvedBy: event?.resolvedBy ?? "",
-        epc: event?.epc ?? "",
-      }))
-    : [];
-
-  return JSON.stringify({
-    counters: payload?.counters ?? {},
-    events: safeEvents,
-  });
-}
-
-async function pollForChanges(baseUrl) {
-  if (watcherInFlight) {
-    return;
-  }
-
-  watcherInFlight = true;
-  try {
-    const response = await fetch(`${baseUrl}/api/events?surface=manager`, {
-      headers: {
-        accept: "application/json",
-      },
-      cache: "no-store",
-      signal: AbortSignal.timeout(3500),
-    });
-
-    if (!response.ok) {
-      return;
-    }
-
-    const payload = await response.json();
-    const nextSignature = signatureForPayload(payload);
-    if (!lastSignature) {
-      lastSignature = nextSignature;
-      return;
-    }
-
-    if (nextSignature !== lastSignature) {
-      lastSignature = nextSignature;
-      broadcastLiveMessage({
-        type: "events-changed",
-        source: "watcher",
-        message: "A new ABIOT update was detected.",
-      });
-    }
-  } catch {
-    // keep websocket channel alive even if one poll fails
-  } finally {
-    watcherInFlight = false;
-  }
-}
-
-function startWatcher(baseUrl) {
-  if (watcherTimer) {
-    return;
-  }
-
-  void pollForChanges(baseUrl);
-  watcherTimer = setInterval(() => {
-    void pollForChanges(baseUrl);
-  }, 2500);
-}
-
 
 function startKeepAlives() {
   let publicAppUrl = process.env.PUBLIC_APP_URL || process.env.RENDER_EXTERNAL_URL || "https://seceurope.onrender.com";
   if (publicAppUrl.endsWith("/")) publicAppUrl = publicAppUrl.slice(0, -1);
 
 
-  // Supabase keep-alive (every 4 days)
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || "";
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || "";
+  // Database keep-alive (every 4 days)
+  const baseUrl = `http://127.0.0.1:${process.env.PORT || 3000}`;
 
-  if (supabaseUrl && supabaseKey) {
-    console.log(`[Keep-Alive] Starting Supabase keep-alive query every 4 days.`);
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Run immediately once
-    supabase.from('raw_scans').select('id').limit(1).then(({ error }) => {
-       if(error) console.error("[Keep-Alive] Initial Supabase ping failed", error.message);
-       else console.log("[Keep-Alive] Initial Supabase ping ok");
+  function dbKeepAlive() {
+    console.log(`[Keep-Alive] Sending keep-alive scan event to internal API.`);
+    fetch(`${baseUrl}/api/scans`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        epc: "E28011606000021180UN002",
+        mode: "handheld",
+        readerId: "CW-C72-01",
+        gateId: "gate-main-entry",
+        direction: "entry"
+      }),
+    }).then(res => {
+      console.log(`[Keep-Alive] DB keep-alive ok: ${res.ok}`);
+    }).catch(err => {
+      console.error(`[Keep-Alive] DB keep-alive failed: `, err.message);
     });
-
-    // And then every 4 days
-    setInterval(() => {
-      supabase.from('raw_scans').select('id').limit(1).then(({ error }) => {
-        if(error) console.error("[Keep-Alive] Supabase ping failed", error.message);
-        else console.log("[Keep-Alive] Supabase ping ok");
-      });
-    }, 4 * 24 * 60 * 60 * 1000);
-  } else {
-    console.log(`[Keep-Alive] Supabase credentials not found, skipping Supabase keep-alive.`);
   }
 
-  // Render keep-alive (every 5 minutes)
-  console.log(`[Keep-Alive] Starting Render web service keep-alive ping to ${publicAppUrl} every 5 minutes.`);
+  // Run immediately once
+  dbKeepAlive();
+
+  // And then every 4 days
+  setInterval(dbKeepAlive, 4 * 24 * 60 * 60 * 1000);
+
+  // Render keep-alive (every 4 minutes)
+  console.log(`[Keep-Alive] Starting Render web service keep-alive ping to ${publicAppUrl} every 4 minutes.`);
   setInterval(() => {
-    fetch(`${publicAppUrl}/api/events?surface=manager`, {
+    fetch(`${publicAppUrl}/`, {
       method: "GET",
       headers: { "user-agent": "render-keep-alive" },
     }).then(res => {
@@ -138,7 +66,7 @@ function startKeepAlives() {
     }).catch(err => {
       console.error(`[Keep-Alive] Render ping failed: `, err.message);
     });
-  }, 5 * 60 * 1000);
+  }, 4 * 60 * 1000);
 }
 
 function startHeartbeat() {
@@ -198,7 +126,6 @@ app.prepare().then(() => {
 
   server.listen(port, host, () => {
     const baseUrl = `http://127.0.0.1:${port}`;
-    startWatcher(baseUrl);
     startKeepAlives();
     startHeartbeat();
     console.log(`Seceurope web listening on http://${host}:${port} (${dev ? "dev" : "prod"})`);
