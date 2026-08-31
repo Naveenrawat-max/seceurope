@@ -129,7 +129,7 @@ export function useEventsSurface(surface: "manager" | "tablet", gateId?: string,
   }, [initialData, refresh]);
 
   useEffect(() => {
-    const fastInterval = 2_500;
+    const fastInterval = 240_000;
     const safetyInterval = 20_000;
     const intervalMs = liveTransport === "websocket" ? safetyInterval : fastInterval;
     const pollTimer = window.setInterval(() => {
